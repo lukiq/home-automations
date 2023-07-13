@@ -27,7 +27,7 @@ wifi:
   # password: !secret ap_ssid_password_fallback
   ap:
     ssid: "Stairs up Fallback Hotspot"
-    password: !secret ap_password_fallback
+    password: !secret wifi_password_fallback
 
 captive_portal:
 

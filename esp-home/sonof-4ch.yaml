@@ -22,7 +22,7 @@ wifi:
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
     ssid: "Sonof-4Ch Fallback Hotspot"
-    password: !secret ap_password_fallback
+    password: !secret wifi_password_fallback
 
 captive_portal:
     
