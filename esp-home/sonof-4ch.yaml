@@ -1,0 +1,102 @@
+esphome:
+  name: sonof-4ch
+
+esp8266:
+  board: esp01_1m
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_key_sonof_4ch
+
+ota:
+  password: !secret ota_password_sonof_4ch
+
+wifi:
+  ssid: !secret wifi_haground_ssid
+  password: !secret wifi_haground_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Sonof-4Ch Fallback Hotspot"
+    password: !secret ap_password_fallback
+
+captive_portal:
+    
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO0
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    name: "Sonoff 4CH Button 1"
+  - platform: gpio
+    pin:
+      number: GPIO9
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    name: "Sonoff 4CH Button 2"
+  - platform: gpio
+    pin:
+      number: GPIO10
+      mode:
+        input: true
+        pullup: false
+      inverted: true
+    name: "Sonoff 4CH Button 3"
+  - platform: gpio
+    pin:
+      number: GPIO14
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    name: "Sonoff 4CH Button 4"
+  - platform: status
+    name: "Sonoff 4CH Status"
+
+output:
+  # Register the blue LED as a dimmable output ....
+  - platform: gpio
+    id: "Domek"
+    inverted: true
+    pin: GPIO12
+  - platform: gpio
+    id: "Front"
+    inverted: true
+    pin: GPIO5
+  - platform: gpio
+    id: "Kosz"
+    inverted: true
+    pin: GPIO4
+  - platform: gpio
+    id: "Sonoff4CHRelay4"
+    inverted: true
+    pin: GPIO15
+  - platform: esp8266_pwm
+    id: blue_led
+    pin: GPIO13
+    inverted: true
+
+light:
+  # ... and then make a light out of it.
+  - platform: monochromatic
+    name: "Sonoff 4CH Blue LED"
+    output: blue_led
+  - platform: binary
+    name: "Domek"
+    output: Domek
+  - platform: binary
+    name: "Front"
+    output: Front
+  - platform: binary
+    name: "Kosz"
+    output: Kosz  
