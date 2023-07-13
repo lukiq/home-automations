@@ -1,0 +1,873 @@
+esphome:
+  name: "esp32-stairs-down"
+  friendly_name: esp32 Stairs Down
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_haground_ssid
+  password: !secret wifi_haground_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Stairs down Fallback Hotspot"
+    password: !secret ap_ssid_password_fallback
+
+captive_portal:
+
+globals:
+  - id: red_percentage
+    type: float
+    restore_value: no
+    initial_value: "1.00"
+  - id: green_percentage
+    type: float
+    restore_value: no
+    initial_value: "0.87"
+  - id: blue_percentage
+    type: float
+    restore_value: no
+    initial_value: "0.50"
+  - id: brightness_percentage
+    type: float
+    restore_value: no
+    initial_value: "0.55"
+
+#include <string>
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO15
+      inverted: true
+      mode:
+        input: true
+    name: "PIR Sensor 1st step Laser stairs_down"
+    device_class: motion
+    filters:
+      - delayed_on: 10ms
+      ### remember, that this will trigger after action in `on_press` are finished (~15sec + 5 seconds)
+      - delayed_off: 5s
+    on_press:
+      then:
+        - logger.log:
+            level: DEBUG
+            format: 'The state of switch: SwitchStairsDownSensorsDisabled is %d'
+            args: ['id(SwitchStairsDownSensorsDisabled).state']
+        - if:
+            condition:
+              switch.is_on: SwitchStairsDownSensorsDisabled
+            then:
+              - logger.log: "[PIR Sensor 1st step Laser stairs_down][on_press], SwitchStairsDownSensorsDisabled is on"
+            else:
+              - logger.log: "[PIR Sensor 1st step Laser stairs_down][on_press], SwitchStairsDownSensorsDisabled is off"
+              - if:
+                  condition:
+                    script.is_running: script_turn_on_steps_up_to_down
+                  then:
+                    - logger.log: "[PIR Sensor 1st step Laser stairs_down][on_press], Already running script_turn_on_steps_up_to_down, do not turn on stairs"
+                  else:
+                    - logger.log: "[PIR Sensor 1st step Laser stairs_down][on_press], Run script.execute"
+                    - script.execute: script_turn_on_steps_down_to_up
+    on_release:
+      then:
+        - logger.log:
+            level: DEBUG
+            format: 'The state of switch: SwitchStairsDownSensorsDisabled is %d'
+            args: ['id(SwitchStairsDownSensorsDisabled).state']
+        - if:
+            condition:
+              switch.is_on: SwitchStairsDownSensorsDisabled
+            then:
+              - logger.log: "[PIR Sensor 1st step Laser stairs_down][on_release], SwitchStairsDownSensorsDisabled is on"
+            else:
+              - logger.log: "[PIR Sensor 1st step Laser stairs_down][on_release], SwitchStairsDownSensorsDisabled is off"
+              - if:
+                  condition:
+                    script.is_running: script_turn_on_steps_down_to_up
+                  then:
+                    - logger.log: "[PIR Sensor 1st step Laser stairs_down][on_release], still running script_turn_on_steps_down_to_up, do not turn off stairs"
+                  else:
+                    - logger.log: "[PIR Sensor 1st step Laser stairs_down][on_release], Run script.execute"
+                    - script.execute: script_turn_off_stairs_down
+  - platform: gpio
+    pin:
+      number: GPIO19
+      mode:
+        input: true
+        pulldown: true
+    name: "PIR Sensor 18th step stairs_down"
+    device_class: motion
+    filters:
+      - delayed_on: 10ms
+      ### remember, that this will trigger after action in `on_press` are finished (~15sec + 5 seconds)
+      - delayed_off: 5s
+    on_press:
+      then:
+        - if:
+            condition:
+              switch.is_on: SwitchStairsDownSensorsDisabled
+            then:
+              - logger.log: "[PIR Sensor 18th step stairs_down][on_press], SwitchStairsDownSensorsDisabled is on"
+            else:
+              - logger.log: "[PIR Sensor 18th step stairs_down][on_press], SwitchStairsDownSensorsDisabled is off"
+              - if:
+                  condition:
+                    script.is_running: script_turn_on_steps_down_to_up
+                  then:
+                    - logger.log: "[PIR Sensor 18th step stairs_down][on_press], Already running script_turn_on_steps_down_to_up, do not turn on stairs"
+                  else:
+                    - logger.log: "[PIR Sensor 18th step stairs_down][on_press], Run script.execute"
+                    - script.execute: script_turn_on_steps_up_to_down
+    on_release:
+      then:
+        - if:
+            condition:
+              switch.is_on: SwitchStairsDownSensorsDisabled
+            then:
+              - logger.log: "[PIR Sensor 18th step stairs_down][on_release], SwitchStairsDownSensorsDisabled is on"
+            else:
+              - logger.log: "[PIR Sensor 18th step stairs_down][on_release], SwitchStairsDownSensorsDisabled is off"
+              - if:
+                  condition:
+                    script.is_running: script_turn_on_steps_down_to_up
+                  then:
+                    - logger.log: "[PIR Sensor 18th step stairs_down][on_release], Already running script_turn_on_steps_down_to_up, do not turn off stairs"
+                  else:
+                    - logger.log: "[PIR Sensor 18th step stairs_down][on_release], Run script.execute:"
+                    - script.execute: script_turn_off_stairs_down
+  - platform: gpio
+    pin:
+      number: GPIO23
+      mode:
+        input: true
+        pulldown: true    
+    name: "Toggle stairs_down"
+    
+    filters: 
+            - delayed_on_off: 300ms
+    on_state:
+      then:
+        - switch.toggle: SwitchStairsDownSensorsDisabled
+        - if:
+            condition:
+              switch.is_on: SwitchStairsDownSensorsDisabled
+            then:
+              - logger.log: "[Toggle stairs_down][on_release], SwitchStairsDownSensorsDisabled is on"
+              - light.turn_on:
+                  id: stairs_down
+                  transition_length: 100ms
+                  red: !lambda 'return id(red_percentage);'
+                  green: !lambda 'return id(green_percentage);'
+                  blue: !lambda 'return id(blue_percentage);'
+                  brightness: !lambda 'return id(brightness_percentage);'
+
+            else:
+              - logger.log: "[Toggle stairs_down][on_release], SwitchStairsDownSensorsDisabled is off"
+              - light.turn_off:
+                  id: stairs_down
+                  transition_length: 100ms
+switch:
+  - platform: template
+    name: "Disabled sensors for downstairs"
+    id: SwitchStairsDownSensorsDisabled
+    optimistic: true
+
+light:
+  # - platform: neopixelbus
+    # type: BRG
+    # variant: WS2811
+    # method:
+    #   type: esp32_rmt
+    #   channel: 0
+  - platform: fastled_clockless
+    rgb_order: BRG
+    chipset: WS2811
+    pin: GPIO22
+    num_leds: 321
+    name: "stairs_down"
+    id: stairs_down
+    default_transition_length: 300ms
+    restore_mode: ALWAYS_OFF
+    effects:
+      - addressable_rainbow:
+      - addressable_scan:
+      - addressable_color_wipe:
+      - addressable_fireworks:
+      - addressable_scan:
+          name: Scan Effect With Custom Values
+          move_interval: 500ms
+          scan_width: 1
+      - addressable_lambda:
+          name: "my effect"
+          update_interval: 400ms
+          lambda: |-
+            static uint8_t steps[] = {17, 17, 17, 17, 17, 18, 23, 19, 16, 19, 21, 17, 17, 17, 17, 17, 17, 18};
+            static uint8_t step_index = 0;
+            static uint8_t led_index = 0;
+            static bool is_setting_color = true;
+            static Color my_current_color = Color(255, 255, 160);
+
+            if (initial_run) {
+              // Reset variables when starting effect
+              step_index = 0;
+              led_index = 0;
+              is_setting_color = true;
+              my_current_color = Color(255, 255, 160);
+              it.all() = Color::BLACK;
+            }
+
+            if (is_setting_color) {
+              // Set the color of the next `steps[step_index]` LEDs
+              it.range(led_index, led_index + steps[step_index] - 1) = my_current_color;
+
+              // Increment `led_index` by the number of LEDs set in this step
+              led_index += steps[step_index];
+
+              // Increment `step_index` and check if we've gone through all the steps
+              step_index++;
+              if (step_index >= sizeof(steps) / sizeof(steps[0])) {
+                // We've gone through all the steps, so we're done setting colors
+                is_setting_color = false;
+                // Start fading out the colors
+                my_current_color.fade_to_black(5000);
+              }
+            } else {
+              // Fade out the LEDs that were just set
+              it.range(led_index - steps[step_index], led_index - 1).fade_to_black(5000);
+
+              // Decrement `led_index` by the number of LEDs faded out in the last step
+              led_index -= steps[step_index - 1];
+
+              // Decrement `step_index` and check if we're done fading out all the steps
+              step_index--;
+              if (step_index == 0) {
+                // We've gone through all the steps, so we're done fading out
+                // Turn off all the LEDs and start over
+                it.all() = Color::BLACK;
+                step_index = 0;
+                led_index = 0;
+                is_setting_color = true;
+                my_current_color = Color(255, 255, 160);
+              }
+            }
+      - addressable_lambda:
+          name: "Falling light"
+          update_interval: 10ms
+          lambda: |-
+            static auto TAG = "Falling light";
+            static uint16_t progress = 0;
+            static ESPHSVColor mYellow = ESPHSVColor(40, 255, 255);
+            if (initial_run) {
+              progress = 0;
+              it.all() = Color::BLACK;
+              ESP_LOGD(TAG, "initial run");
+              ESP_LOGD(TAG, "it.size() =  %d", it.size());
+            }
+            else {
+              //yellow led appear at start of strip and falling down
+              if (progress < it.size()) {
+                it[progress] = mYellow;
+                progress++;
+                //ESP_LOGD(TAG, "increas progress : %d", progress);
+              }
+              //when all leds get yellow light, do nothing
+              else {
+                }
+            };
+      
+      - addressable_lambda:
+          name: "Rise light"
+          update_interval: 10ms
+          lambda: |-
+            static auto TAG = "Rise light";
+            static uint16_t progress = 0;
+            static ESPHSVColor mYellow = ESPHSVColor(40, 255, 255);
+            if (initial_run) {
+              progress = 0;
+              it.all() = Color::BLACK;
+              ESP_LOGD(TAG, "initial run");
+            }
+            else {
+              //yellow led appear at the end of strip and rising up
+              if (progress < it.size()) {
+                progress++;
+                it[it.size() - progress] = mYellow;
+                //ESP_LOGD(TAG, "increas progress : %d", progress);
+              }
+              //when all leds get yellow light, do nothing
+              else {
+                }
+            };
+            
+      - addressable_lambda:
+          name: "Simple light"
+          update_interval: 10ms
+          lambda: |-
+            static auto TAG = "Simple light";
+            static uint16_t progress = 0;
+            static ESPHSVColor mhsv;
+            static ESPHSVColor mYellow = ESPHSVColor(40, 255, 255);
+            if (initial_run) {
+              progress = 0;
+              it.all() = mYellow.to_rgb();
+              mhsv = mYellow;
+              ESP_LOGD(TAG, "initial mhsv.hue is: %d", mhsv.hue);
+            }
+            else {
+              //strip change hue a litle, light blink effect when motion detected within occupied interval
+              if (progress < 5) {
+                mhsv.hue += 3;
+                it.all() = mhsv.to_rgb();
+                progress++;
+                //ESP_LOGD(TAG, "increas mhsv.hue : %d", mhsv.hue);
+              }
+              //set hue to initial value
+              else if (progress < 10) {
+                mhsv.hue -= 3;
+                it.all() = mhsv.to_rgb();
+                progress++;
+                //ESP_LOGD(TAG, "next progress : %d", progress);
+              }                  
+              else if (progress == 10) {
+                it.all() = mYellow.to_rgb();
+                progress++;
+                }
+              else {
+              
+              }
+            };  
+  - platform: partition
+    id: "stairs_down_step1"
+    name: "stairs_down_step1"
+    default_transition_length: 300ms
+    effects:
+      - addressable_rainbow:
+    segments:
+      - id: stairs_down
+        from: 0
+        to: 16
+
+  - platform: partition
+    id: "stairs_down_step2"
+    name: "stairs_down_step2"
+    default_transition_length: 300ms
+    effects:
+      - addressable_rainbow:
+    segments:
+      - id: stairs_down
+        from: 17
+        to: 33
+
+  - platform: partition
+    id: "stairs_down_step3"
+    name: "stairs_down_step3"
+    default_transition_length: 300ms
+    effects:
+      - addressable_rainbow:
+    segments:
+      - id: stairs_down
+        from: 34
+        to: 50
+
+  - platform: partition
+    id: "stairs_down_step4"
+    name: "stairs_down_step4"
+    default_transition_length: 300ms
+    effects:
+      - addressable_rainbow:
+    segments:
+      - id: stairs_down
+        from: 51
+        to: 67
+
+  - platform: partition
+    id: "stairs_down_step5"
+    name: "stairs_down_step5"
+    default_transition_length: 300ms
+    effects:
+      - addressable_rainbow:
+    segments:
+      - id: stairs_down
+        from: 68
+        to: 84
+
+  - platform: partition
+    id: "stairs_down_step6"
+    name: "stairs_down_step6"
+    default_transition_length: 300ms
+    effects:
+      - addressable_rainbow:
+    segments:
+      - id: stairs_down
+        from: 85
+        to: 102
+
+  - platform: partition
+    id: "stairs_down_step7"
+    name: "stairs_down_step7"
+    default_transition_length: 300ms
+    effects:
+      - addressable_rainbow:
+    segments:
+      - id: stairs_down
+        from: 103
+        to: 125
+
+  - platform: partition
+    id: "stairs_down_step8"
+    name: "stairs_down_step8"
+    default_transition_length: 300ms
+    effects:
+      - addressable_rainbow:
+    segments:
+      - id: stairs_down
+        from: 126
+        to: 144
+
+  - platform: partition
+    id: "stairs_down_step9"
+    name: "stairs_down_step9"
+    default_transition_length: 300ms
+    effects:
+      - addressable_rainbow:
+    segments:
+      - id: stairs_down
+        from: 145
+        to: 160
+
+  - platform: partition
+    id: "stairs_down_step10"
+    name: "stairs_down_step10"
+    default_transition_length: 300ms
+    effects:
+      - addressable_rainbow:
+    segments:
+      - id: stairs_down
+        from: 161
+        to: 179
+
+  - platform: partition
+    id: "stairs_down_step11"
+    name: "stairs_down_step11"
+    default_transition_length: 300ms
+    effects:
+      - addressable_rainbow:
+    segments:
+      - id: stairs_down
+        from: 180
+        to: 200
+
+  - platform: partition
+    id: "stairs_down_step12"
+    name: "stairs_down_step12"
+    default_transition_length: 300ms
+    effects:
+      - addressable_rainbow:
+    segments:
+      - id: stairs_down
+        from: 201
+        to: 217
+
+  - platform: partition
+    id: "stairs_down_step13"
+    name: "stairs_down_step13"
+    default_transition_length: 300ms
+    effects:
+      - addressable_rainbow:
+    segments:
+      - id: stairs_down
+        from: 218
+        to: 234
+
+  - platform: partition
+    id: "stairs_down_step14"
+    name: "stairs_down_step14"
+    default_transition_length: 300ms
+    effects:
+      - addressable_rainbow:
+    segments:
+      - id: stairs_down
+        from: 235
+        to: 251
+  - platform: partition
+    name: "stairs_down_step15"
+    id: "stairs_down_step15"
+    default_transition_length: 300ms
+    effects:
+      - addressable_rainbow:
+    segments:
+      - id: stairs_down
+        from: 252
+        to: 268
+  - platform: partition
+    name: "stairs_down_step16"
+    id: "stairs_down_step16"
+    default_transition_length: 300ms
+    effects:
+      - addressable_rainbow:
+    segments:
+      - id: stairs_down
+        from: 269
+        to: 285
+  - platform: partition
+    name: "stairs_down_step17"
+    id: "stairs_down_step17"
+    default_transition_length: 300ms
+    effects:
+      - addressable_rainbow:
+    segments:
+      - id: stairs_down
+        from: 286
+        to: 302
+  - platform: partition
+    name: "stairs_down_step18"
+    id: "stairs_down_step18"
+    default_transition_length: 300ms
+    effects:
+      - addressable_rainbow:
+    segments:
+      - id: stairs_down
+        from: 303
+        to: 320
+
+
+script:
+  - id: script_turn_off_stairs_down
+    then:
+      - light.turn_off:
+          id: stairs_down
+          transition_length: 900ms
+  - id: script_turn_on_steps_up_to_down
+    then:
+      - light.turn_off:
+          id: stairs_down
+          transition_length: 10ms
+      - light.turn_on:
+          id: stairs_down_step18
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 250ms
+      - light.turn_on:
+          id: stairs_down_step17
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 250ms
+      - light.turn_on:
+          id: stairs_down_step16
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 250ms
+      - light.turn_on:
+          id: stairs_down_step15
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 250ms
+      - light.turn_on:
+          id: stairs_down_step14
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 250ms
+      - light.turn_on:
+          id: stairs_down_step13
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 250ms
+      - light.turn_on:
+          id: stairs_down_step12
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 250ms
+      - light.turn_on:
+          id: stairs_down_step11
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 250ms
+      - light.turn_on:
+          id: stairs_down_step10
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 250ms
+      - light.turn_on:
+          id: stairs_down_step9
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 250ms
+      - light.turn_on:
+          id: stairs_down_step8
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 250ms
+      - light.turn_on:
+          id: stairs_down_step7
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 250ms
+      - light.turn_on:
+          id: stairs_down_step6
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 250ms
+      - light.turn_on:
+          id: stairs_down_step5
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 250ms
+      - light.turn_on:
+          id: stairs_down_step4
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 250ms
+      - light.turn_on:
+          id: stairs_down_step3
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 250ms
+      - light.turn_on:
+          id: stairs_down_step2
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 250ms
+      - light.turn_on:
+          id: stairs_down_step1
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - light.turn_on:
+          id: stairs_down
+          transition_length: 10ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      ## wait extra 15,75 seconds to finish the task, total 20 seconds
+      - logger.log: "[script_turn_on_steps_up_to_down], wait 10750ms"
+      - delay: 15750ms
+  - id: script_turn_on_steps_down_to_up
+    then:
+      - light.turn_off:
+          id: stairs_down
+          transition_length: 10ms
+      - light.turn_on:
+          id: stairs_down_step1
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 330ms
+      - light.turn_on:
+          id: stairs_down_step2
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 330ms
+      - light.turn_on:
+          id: stairs_down_step3
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 330ms
+      - light.turn_on:
+          id: stairs_down_step4
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 330ms
+      - light.turn_on:
+          id: stairs_down_step5
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 330ms
+      - light.turn_on:
+          id: stairs_down_step6
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 330ms
+      - light.turn_on:
+          id: stairs_down_step7
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 330ms
+      - light.turn_on:
+          id: stairs_down_step8
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 330ms
+      - light.turn_on:
+          id: stairs_down_step9
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 330ms
+      - light.turn_on:
+          id: stairs_down_step10
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 330ms
+      - light.turn_on:
+          id: stairs_down_step11
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 330ms
+      - light.turn_on:
+          id: stairs_down_step12
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 330ms
+      - light.turn_on:
+          id: stairs_down_step13
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 330ms
+      - light.turn_on:
+          id: stairs_down_step14
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 330ms
+      - light.turn_on:
+          id: stairs_down_step15
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 330ms
+      - light.turn_on:
+          id: stairs_down_step16
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 330ms
+      - light.turn_on:
+          id: stairs_down_step17
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - delay: 330ms
+      - light.turn_on:
+          id: stairs_down_step18
+          transition_length: 100ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      - light.turn_on:
+          id: stairs_down
+          transition_length: 10ms
+          red: !lambda 'return id(red_percentage);'
+          green: !lambda 'return id(green_percentage);'
+          blue: !lambda 'return id(blue_percentage);'
+          brightness: !lambda 'return id(brightness_percentage);'
+      ## wait extra 16 seconds to finish the task, total 22 seconds
+      - logger.log: "[script_turn_on_steps_down_to_up], wait 16000ms"
+      - delay: 16000ms
+      - light.turn_off:
+          id: stairs_down
+          transition_length: 10ms
