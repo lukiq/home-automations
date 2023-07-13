@@ -1,0 +1,98 @@
+esphome:
+  name: "bathroom-1st-floor"
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_key_bathroom_1st_floor
+
+ota:
+  password: !secret ota_password_bathroom_1st_floor
+
+wifi:
+  ssid: !secret wifi_ssid_ha_1stfloor
+  password: !secret wifi_password_ha_1stfloor
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Bathroom-1st-floor Hotspot"
+    password: !secret wifi_password_fallback
+
+captive_portal:
+
+light:
+  - platform: fastled_clockless
+    rgb_order: BRG
+    chipset: WS2811
+    pin: GPIO22
+    num_leds: 43
+    name: "Led mirror"
+    id: Led_mirror
+    default_transition_length: 100ms
+    restore_mode: ALWAYS_OFF
+    effects:
+      - addressable_rainbow:
+      - addressable_scan:
+      - addressable_color_wipe:
+      - addressable_fireworks:
+      - addressable_scan:
+          name: Scan Effect With Custom Values
+          move_interval: 500ms
+          scan_width: 1
+  - platform: fastled_clockless
+    rgb_order: BRG
+    chipset: WS2811
+    pin: GPIO23
+    num_leds: 43
+    name: "Led shower"
+    id: Led_shower
+    default_transition_length: 100ms
+    restore_mode: ALWAYS_OFF
+    effects:
+      - addressable_rainbow:
+      - addressable_scan:
+      - addressable_color_wipe:
+      - addressable_fireworks:
+      - addressable_scan:
+          name: Scan Effect With Custom Values
+          move_interval: 500ms
+          scan_width: 1
+
+binary_sensor:
+  - platform: gpio
+    pin: 
+        number: GPIO25
+        mode:
+          input: true
+          pulldown: true
+    name: "Led mirror switch"
+    filters:
+      - invert
+      - delayed_on_off: 100ms
+    on_state: 
+      - light.toggle: Led_mirror
+
+  - platform: gpio
+    pin: 
+        number: GPIO33
+        mode:
+          input: true
+          pulldown: true
+    name: "Led shower switch"
+    filters:
+      - invert
+      - delayed_on_off: 100ms
+    on_state: 
+      - light.toggle: Led_shower
+
+switch:
+  - platform: restart
+    name: "Restart bathroom 1st floor"
