@@ -27,7 +27,7 @@ wifi:
   # password: !secret ap_ssid_password_fallback
   ap:
     ssid: "Stairs up Fallback Hotspot"
-    password: !secret wifi_password_fallback
+    password: !secret ap_password_fallback
 
 captive_portal:
 
@@ -63,7 +63,7 @@ binary_sensor:
     name: "PIR Sensor 1st step Laser stairs_down"
     device_class: motion
     filters:
-      - delayed_on: 10ms
+      - delayed_on: 100ms
       ### remember, that this will trigger after action in `on_press` are finished (~15sec + 5 seconds)
       - delayed_off: 1s
     on_press:
@@ -110,16 +110,16 @@ binary_sensor:
                     - script.execute: script_turn_off_stairs_up
   - platform: gpio
     pin:
-      number: GPIO05
+      number: GPIO34
+      inverted: false
       mode:
         input: true
-        pulldown: true
     name: "PIR Sensor 16st step stairs_up"
     device_class: motion
     filters:
-      - delayed_on: 10ms
+      - delayed_on: 100ms
       ### remember, that this will trigger after action in `on_press` are finished (~15sec + 5 seconds)
-      - delayed_off: 8s
+      - delayed_off: 1s
 
     on_press:
       then:
@@ -152,16 +152,16 @@ binary_sensor:
             condition:
               switch.is_on: SwitchStairsUpSensorsDisabled
             then:
-              - logger.log: "[PIR Sensor 1st step Laser stairs_down][on_release], SwitchStairsUpSensorsDisabled is on"
+              - logger.log: "[PIR Sensor 16st step stairs_up][on_release], SwitchStairsUpSensorsDisabled is on"
             else:
-              - logger.log: "[PIR Sensor 1st step Laser stairs_down][on_release], SwitchStairsUpSensorsDisabled is off"
+              - logger.log: "[PIR Sensor 16st step stairs_up][on_release], SwitchStairsUpSensorsDisabled is off"
               - if:
                   condition:
                     script.is_running: script_turn_on_steps_down_to_up
                   then:
-                    - logger.log: "[PIR Sensor 1st step Laser stairs_down][on_release], Already running script_turn_on_steps_down_to_up, do not turn off stairs"
+                    - logger.log: "[PIR Sensor 16st step stairs_up][on_release], Already running script_turn_on_steps_down_to_up, do not turn off stairs"
                   else:
-                    - logger.log: "[PIR Sensor 1st step Laser stairs_down][on_release], Run script.execute"
+                    - logger.log: "[PIR Sensor 16st step stairs_up][on_release], Run script.execute"
                     - script.execute: script_turn_off_stairs_up
         
   - platform: gpio
@@ -842,3 +842,4 @@ script:
       - delay: 10000ms
       - logger.log: "[script.execute: script_turn_off_stairs_up]"
       - script.execute: script_turn_off_stairs_up
+    
