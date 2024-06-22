@@ -26,28 +26,71 @@ wifi:
 switch:
   - platform: gpio
     name: "Main Section"
+    id: main_section
     pin: GPIO32
     inverted: true
+    on_turn_off:
+      then:
+        - switch.turn_off: section_1
+        - switch.turn_off: section_2
+        - switch.turn_off: section_3
+        - switch.turn_off: section_4
+        - switch.turn_off: section_5
   - platform: gpio
     name: "Section 1"
+    id: section_1
     pin: GPIO33
     inverted: true
+    on_turn_on:
+      then:
+        - switch.turn_on: main_section
+    on_turn_off:
+      then:
+        - switch.turn_off: main_section
   - platform: gpio
     name: "Section 2"
+    id: section_2
     pin: GPIO25
     inverted: true
+    on_turn_on:
+      then:
+        - switch.turn_on: main_section
+    on_turn_off:
+      then:
+        - switch.turn_off: main_section
   - platform: gpio
     name: "Section 3"
+    id: section_3
     pin: GPIO26
     inverted: true
+    on_turn_on:
+      then:
+        - switch.turn_on: main_section
+    on_turn_off:
+      then:
+        - switch.turn_off: main_section
   - platform: gpio
     name: "Section 4"
+    id: section_4
     pin: GPIO27
     inverted: true
+    on_turn_on:
+      then:
+        - switch.turn_on: main_section
+    on_turn_off:
+      then:
+        - switch.turn_off: main_section
   - platform: gpio
     name: "Section 5"
+    id: section_5
     pin: GPIO14
     inverted: true
+    on_turn_on:
+      then:
+        - switch.turn_on: main_section
+    on_turn_off:
+      then:
+        - switch.turn_off: main_section
   - platform: gpio
     name: "Garden Switch 1"
     pin: GPIO2
