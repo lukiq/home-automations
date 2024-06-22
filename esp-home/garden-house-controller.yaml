@@ -1,0 +1,79 @@
+esphome:
+  name: garden-house-controller
+  friendly_name: Garden House Controller
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+ota:
+  password: !secret ota_password_garden_controller
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_key_garden_house_controller
+    
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+# Define the GPIO pins for the relays
+switch:
+  - platform: gpio
+    name: "Main Section"
+    pin: GPIO32
+    inverted: true
+  - platform: gpio
+    name: "Section 1"
+    pin: GPIO33
+    inverted: true
+  - platform: gpio
+    name: "Section 2"
+    pin: GPIO25
+    inverted: true
+  - platform: gpio
+    name: "Section 3"
+    pin: GPIO26
+    inverted: true
+  - platform: gpio
+    name: "Section 4"
+    pin: GPIO27
+    inverted: true
+  - platform: gpio
+    name: "Section 5"
+    pin: GPIO14
+    inverted: true
+  - platform: gpio
+    name: "Garden Switch 1"
+    pin: GPIO2
+    inverted: true
+  - platform: gpio
+    name: "Garden Switch 2"
+    pin: GPIO15
+    inverted: true
+
+binary_sensor:
+  - platform: gpio
+    name: "contracton"
+    pin: 
+      number: GPIO23
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    filters:
+      - delayed_on: 100ms
+      - delayed_off: 100ms
+
+# Optional: Define web server for monitoring
+web_server:
+  version: 3
+  port: 80
+  auth:
+    username: !secret esp_web_server_username
+    password: !secret esp_web_server_password
