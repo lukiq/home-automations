@@ -1,0 +1,124 @@
+esphome:
+  name: garden-house-controller
+  friendly_name: Garden House Controller
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+ota:
+  password: !secret ota_password_garden_controller
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_key_garden_house_controller
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+switch:
+  - platform: gpio
+    id: main_section
+    name: "Main Section"
+    pin: GPIO32
+    inverted: true
+
+  - platform: gpio
+    id: section_1
+    name: "Section 1"
+    pin: GPIO33
+    inverted: true
+
+  - platform: gpio
+    id: section_2
+    name: "Section 2"
+    pin: GPIO25
+    inverted: true
+
+  - platform: gpio
+    id: section_3
+    name: "Section 3"
+    pin: GPIO26
+    inverted: true
+
+  - platform: gpio
+    id: section_4
+    name: "Section 4"
+    pin: GPIO27
+    inverted: true
+
+  - platform: gpio
+    id: section_5
+    name: "Section 5"
+    pin: GPIO14
+    inverted: true
+
+  - platform: gpio
+    name: "Garden Switch 1"
+    pin: GPIO2
+    inverted: true
+
+  - platform: gpio
+    name: "Garden Switch 2"
+    pin: GPIO15
+    inverted: true
+
+sprinkler:
+  - id: garden_sprinkler_ctrlr
+    main_switch: "Lawn Sprinklers"
+    auto_advance_switch: "Lawn Sprinklers Auto Advance"
+    reverse_switch: "Lawn Sprinklers Reverse"
+    valve_open_delay: 5s
+    valves:
+      - valve_switch: "Section 1"
+        enable_switch: "Enable Section 1"
+        pump_switch_id: main_section
+        run_duration: 1200s
+        valve_switch_id: section_1
+      - valve_switch: "Section 2"
+        enable_switch: "Enable Section 2"
+        pump_switch_id: main_section
+        run_duration: 1200s
+        valve_switch_id: section_2
+      - valve_switch: "Section 3"
+        enable_switch: "Enable Section 3"
+        pump_switch_id: main_section
+        run_duration: 1200s
+        valve_switch_id: section_3
+      - valve_switch: "Section 4"
+        enable_switch: "Enable Section 4"
+        pump_switch_id: main_section
+        run_duration: 1800s
+        valve_switch_id: section_4
+      - valve_switch: "Section 5"
+        enable_switch: "Enable Section 5"
+        pump_switch_id: main_section
+        run_duration: 1800s
+        valve_switch_id: section_5
+
+binary_sensor:
+  - platform: gpio
+    name: "contracton"
+    pin: 
+      number: GPIO23
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    filters:
+      - delayed_on: 100ms
+      - delayed_off: 100ms
+
+# Optional: Define web server for monitoring
+web_server:
+  version: 3
+  port: 80
+  auth:
+    username: !secret esp_web_server_username
+    password: !secret esp_web_server_password

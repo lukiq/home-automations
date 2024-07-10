@@ -15,6 +15,7 @@ api:
     key: !secret api_key_bathroom_1st_floor
 
 ota:
+  platform: esphome
   password: !secret ota_password_bathroom_1st_floor
 
 wifi:

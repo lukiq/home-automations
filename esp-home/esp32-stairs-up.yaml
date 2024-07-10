@@ -16,8 +16,8 @@ api:
     key: !secret api_key_stairs_up
 
 ota:
+  platform: esphome
   password: !secret ota_password_stairs_up
-
 
 wifi:
   ssid: !secret wifi_ssid
@@ -63,9 +63,9 @@ binary_sensor:
     name: "PIR Sensor 1st step Laser stairs_down"
     device_class: motion
     filters:
-      - delayed_on: 100ms
+      - delayed_on: 200ms
       ### remember, that this will trigger after action in `on_press` are finished (~15sec + 5 seconds)
-      - delayed_off: 1s
+      - delayed_off: 10ms
     on_press:
       then:
         - logger.log:
@@ -111,15 +111,15 @@ binary_sensor:
   - platform: gpio
     pin:
       number: GPIO34
-      inverted: false
+      inverted: true
       mode:
         input: true
     name: "PIR Sensor 16st step stairs_up"
     device_class: motion
     filters:
-      - delayed_on: 100ms
+      - delayed_on: 250ms
       ### remember, that this will trigger after action in `on_press` are finished (~15sec + 5 seconds)
-      - delayed_off: 1s
+      - delayed_off: 10ms
 
     on_press:
       then:
@@ -571,7 +571,6 @@ script:
       - light.turn_off:
           id: stairs_up
           transition_length: 10ms
-      - delay: 250ms
       - light.turn_on:
           id: stairs_up_step16
           transition_length: 100ms
@@ -706,11 +705,10 @@ script:
           green: !lambda 'return id(green_percentage);'
           blue: !lambda 'return id(blue_percentage);'
           brightness: !lambda 'return id(brightness_percentage);'
-      ## wait extra 15,75 seconds to finish the task, total 20 seconds
-      # - logger.log: "[script_turn_on_steps_down_to_up], wait 10750ms"
-      - logger.log: "[script_turn_on_steps_down_to_up], wait 3000ms"
-      # - delay: 15750ms
-      - delay: 3000ms
+      - logger.log: "[script_turn_on_steps_down_to_up], wait 10000ms"
+      - delay: 20000ms
+      - logger.log: "[script.execute: script_turn_off_stairs_up]"
+      - script.execute: script_turn_off_stairs_up
   - id: script_turn_on_steps_up_to_down
     then:
       - light.turn_off:
@@ -835,11 +833,8 @@ script:
           green: !lambda 'return id(green_percentage);'
           blue: !lambda 'return id(blue_percentage);'
           brightness: !lambda 'return id(brightness_percentage);'
-      ## wait extra 13 seconds to finish the task, total 20 seconds
-      # - logger.log: "[script_turn_on_steps_up_to_down], wait 8000ms"
-      # - delay: 13000ms
-      - logger.log: "[script_turn_on_steps_up_to_down], wait 10000ms"
-      - delay: 10000ms
+      - logger.log: "[script_turn_on_steps_up_to_down], wait 20000ms"
+      - delay: 20000ms
       - logger.log: "[script.execute: script_turn_off_stairs_up]"
       - script.execute: script_turn_off_stairs_up
     

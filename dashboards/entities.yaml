@@ -1,0 +1,129 @@
+title: Dom
+views:
+  - title: Keys
+    path: keys
+    icon: mdi:cloud-key-outline
+    cards:
+      - type: entities
+        entities:
+          - entity: lock.gate_door_lock
+          - entity: cover.garage_gate
+  - icon: mdi:lightbulb-group
+    title: Lights
+    path: lights
+    cards:
+      - type: light
+        entity: light.living_room_led
+      - type: light
+        entity: light.shellyrgbw2_2643ab
+      - type: entities
+        entities:
+          - entity: light.domek
+          - entity: light.front
+  - title: Curtains
+    path: curtains
+    icon: mdi:roller-shade
+    cards:
+      - type: entities
+        entities:
+          - entity: cover.all_shutters
+          - entity: cover.kitchen_shutter
+          - entity: cover.living_room_hs_left_shutter
+          - entity: cover.living_room_hs_middle_shutter
+          - entity: cover.living_room_hs_right_shutter
+          - entity: cover.living_room_fs_shutter
+          - entity: cover.master_bedroom_shutter
+          - entity: cover.hanna_bedroom_shutter
+          - entity: cover.franek_bedroom_shutter
+          - entity: cover.bathroom_shutter
+          - entity: cover.boiler_room_shutter
+          - entity: cover.attic_shutter
+  - path: default_view
+    title: Home
+    cards:
+      - type: entities
+        entities:
+          - entity: switch.esp32_stairs_up_disabled_sensors_for_upstairs
+          - entity: >-
+              binary_sensor.esp32_stairs_up_pir_sensor_1st_step_laser_stairs_down
+          - entity: binary_sensor.esp32_stairs_up_pir_sensor_16st_step_stairs_up
+          - entity: switch.esp32_stairs_up_rundowntouponstairsup
+          - entity: switch.esp32_stairs_up_runuptodownonstairsup
+          - entity: light.esp32_stairs_up_stairs_up
+          - entity: light.esp32_stairs_up_stairs_up_step1
+          - entity: light.esp32_stairs_up_stairs_up_step2
+          - entity: light.esp32_stairs_up_stairs_up_step3
+          - entity: light.esp32_stairs_up_stairs_up_step4
+          - entity: light.esp32_stairs_up_stairs_up_step5
+          - entity: light.esp32_stairs_up_stairs_up_step6
+          - entity: light.esp32_stairs_up_stairs_up_step7
+          - entity: light.esp32_stairs_up_stairs_up_step8
+          - entity: light.esp32_stairs_up_stairs_up_step9
+          - entity: light.esp32_stairs_up_stairs_up_step10
+          - entity: light.esp32_stairs_up_stairs_up_step11
+          - entity: light.esp32_stairs_up_stairs_up_step12
+          - entity: light.esp32_stairs_up_stairs_up_step13
+          - entity: light.esp32_stairs_up_stairs_up_step14
+          - entity: light.esp32_stairs_up_stairs_up_step15
+          - entity: light.esp32_stairs_up_stairs_up_step16
+          - entity: switch.esp32_stairs_up_stairs_up_restart
+      - type: entities
+        entities:
+          - entity: light.led_mirror
+          - entity: light.led_shower
+          - entity: switch.block_automatic_bathroom_light_off
+          - entity: binary_sensor.led_mirror_switch
+          - entity: binary_sensor.led_shower_switch
+        title: Bathroom
+      - type: entities
+        entities:
+          - entity: switch.esp32_stairs_down_disabled_sensors_for_downstairs
+          - entity: >-
+              binary_sensor.esp32_stairs_down_pir_sensor_1st_step_laser_stairs_down
+          - entity: binary_sensor.esp32_stairs_down_pir_sensor_18th_step_stairs_down
+          - entity: switch.esp32_stairs_up_rundowntouponstairsup
+          - entity: switch.esp32_stairs_up_runuptodownonstairsup
+          - entity: light.esp32_stairs_down_stairs_down
+          - entity: light.esp32_stairs_down_stairs_down_step1
+          - entity: light.esp32_stairs_down_stairs_down_step2
+          - entity: light.esp32_stairs_down_stairs_down_step3
+          - entity: light.esp32_stairs_down_stairs_down_step4
+          - entity: light.esp32_stairs_down_stairs_down_step5
+          - entity: light.esp32_stairs_down_stairs_down_step6
+          - entity: light.esp32_stairs_down_stairs_down_step7
+          - entity: light.esp32_stairs_down_stairs_down_step8
+          - entity: light.esp32_stairs_down_stairs_down_step9
+          - entity: light.esp32_stairs_down_stairs_down_step10
+          - entity: light.esp32_stairs_down_stairs_down_step11
+          - entity: light.esp32_stairs_down_stairs_down_step12
+          - entity: light.esp32_stairs_down_stairs_down_step13
+          - entity: light.esp32_stairs_down_stairs_down_step14
+          - entity: light.esp32_stairs_down_stairs_down_step15
+          - entity: light.esp32_stairs_down_stairs_down_step16
+          - entity: light.esp32_stairs_down_stairs_down_step17
+          - entity: light.esp32_stairs_down_stairs_down_step18
+        title: Salon
+  - title: AC
+    path: ac
+    badges: []
+    cards:
+      - type: thermostat
+        entity: climate.31885837894225_climate
+  - title: TV
+    path: tv
+    icon: mdi:remote-tv
+    badges: []
+    cards:
+      - type: media-control
+        entity: media_player.lg_webos_smart_tv_olde77c3
+      - type: media-control
+        entity: media_player.lg_webos_65_smart_tv
+  - title: Alarm
+    path: alarm
+    icon: mdi:alarm-panel
+    cards:
+      - type: alarm-panel
+        states:
+          - arm_home
+          - arm_away
+        entity: alarm_control_panel.risco_halskiej_partition_0
