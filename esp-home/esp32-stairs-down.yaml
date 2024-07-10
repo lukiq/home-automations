@@ -16,6 +16,7 @@ api:
     key: !secret api_encryption_key
 
 ota:
+  platform: esphome
   password: !secret ota_password
 
 wifi:
@@ -52,16 +53,16 @@ globals:
 binary_sensor:
   - platform: gpio
     pin:
-      number: GPIO15
+      number: GPIO18
       inverted: true
       mode:
         input: true
     name: "PIR Sensor 1st step Laser stairs_down"
     device_class: motion
     filters:
-      - delayed_on: 10ms
+      - delayed_on: 100ms
       ### remember, that this will trigger after action in `on_press` are finished (~15sec + 5 seconds)
-      - delayed_off: 5s
+      - delayed_off: 10ms
     on_press:
       then:
         - logger.log:
@@ -89,21 +90,21 @@ binary_sensor:
             level: DEBUG
             format: 'The state of switch: SwitchStairsDownSensorsDisabled is %d'
             args: ['id(SwitchStairsDownSensorsDisabled).state']
-        - if:
-            condition:
-              switch.is_on: SwitchStairsDownSensorsDisabled
-            then:
-              - logger.log: "[PIR Sensor 1st step Laser stairs_down][on_release], SwitchStairsDownSensorsDisabled is on"
-            else:
-              - logger.log: "[PIR Sensor 1st step Laser stairs_down][on_release], SwitchStairsDownSensorsDisabled is off"
-              - if:
-                  condition:
-                    script.is_running: script_turn_on_steps_down_to_up
-                  then:
-                    - logger.log: "[PIR Sensor 1st step Laser stairs_down][on_release], still running script_turn_on_steps_down_to_up, do not turn off stairs"
-                  else:
-                    - logger.log: "[PIR Sensor 1st step Laser stairs_down][on_release], Run script.execute"
-                    - script.execute: script_turn_off_stairs_down
+        # - if:
+        #     condition:
+        #       switch.is_on: SwitchStairsDownSensorsDisabled
+        #     then:
+        #       - logger.log: "[PIR Sensor 1st step Laser stairs_down][on_release], SwitchStairsDownSensorsDisabled is on"
+        #     else:
+        #       - logger.log: "[PIR Sensor 1st step Laser stairs_down][on_release], SwitchStairsDownSensorsDisabled is off"
+        #       - if:
+        #           condition:
+        #             script.is_running: script_turn_on_steps_down_to_up
+        #           then:
+        #             - logger.log: "[PIR Sensor 1st step Laser stairs_down][on_release], still running script_turn_on_steps_down_to_up, do not turn off stairs"
+        #           else:
+        #             - logger.log: "[PIR Sensor 1st step Laser stairs_down][on_release], Run script.execute"
+        #             - script.execute: script_turn_off_stairs_down
   - platform: gpio
     pin:
       number: GPIO19
@@ -113,9 +114,9 @@ binary_sensor:
     name: "PIR Sensor 18th step stairs_down"
     device_class: motion
     filters:
-      - delayed_on: 10ms
+      - delayed_on: 200ms
       ### remember, that this will trigger after action in `on_press` are finished (~15sec + 5 seconds)
-      - delayed_off: 5s
+      - delayed_off: 10ms
     on_press:
       then:
         - if:
@@ -135,21 +136,25 @@ binary_sensor:
                     - script.execute: script_turn_on_steps_up_to_down
     on_release:
       then:
-        - if:
-            condition:
-              switch.is_on: SwitchStairsDownSensorsDisabled
-            then:
-              - logger.log: "[PIR Sensor 18th step stairs_down][on_release], SwitchStairsDownSensorsDisabled is on"
-            else:
-              - logger.log: "[PIR Sensor 18th step stairs_down][on_release], SwitchStairsDownSensorsDisabled is off"
-              - if:
-                  condition:
-                    script.is_running: script_turn_on_steps_down_to_up
-                  then:
-                    - logger.log: "[PIR Sensor 18th step stairs_down][on_release], Already running script_turn_on_steps_down_to_up, do not turn off stairs"
-                  else:
-                    - logger.log: "[PIR Sensor 18th step stairs_down][on_release], Run script.execute:"
-                    - script.execute: script_turn_off_stairs_down
+        - logger.log:
+            level: DEBUG
+            format: 'The state of switch: SwitchStairsDownSensorsDisabled is %d'
+            args: ['id(SwitchStairsDownSensorsDisabled).state']
+          # - if:
+          #     condition:
+          #       switch.is_on: SwitchStairsDownSensorsDisabled
+          #     then:
+          #       - logger.log: "[PIR Sensor 18th step stairs_down][on_release], SwitchStairsDownSensorsDisabled is on"
+          #     else:
+          #       - logger.log: "[PIR Sensor 18th step stairs_down][on_release], SwitchStairsDownSensorsDisabled is off"
+          #       - if:
+          #           condition:
+          #             script.is_running: script_turn_on_steps_down_to_up
+          #           then:
+          #             - logger.log: "[PIR Sensor 18th step stairs_down][on_release], Already running script_turn_on_steps_down_to_up, do not turn off stairs"
+          #           else:
+          #             - logger.log: "[PIR Sensor 18th step stairs_down][on_release], Run script.execute:"
+          #             - script.execute: script_turn_off_stairs_down
   - platform: gpio
     pin:
       number: GPIO23
@@ -186,6 +191,24 @@ switch:
     name: "Disabled sensors for downstairs"
     id: SwitchStairsDownSensorsDisabled
     optimistic: true
+  - platform: template
+    name: "StairsDownRunUpToDownOnStairsUp"
+    id: StairsDownRunUpToDownOnStairsUp
+    optimistic: true
+    turn_on_action:
+      - script.execute: script_turn_on_steps_up_to_down
+    turn_off_action:
+      - script.execute: script_turn_off_stairs_down
+  - platform: template
+    name: "StairsDownRunDownToUpOnStairsUp"
+    id: StairsDownRunDownToUpOnStairsUp
+    optimistic: true
+    turn_on_action:
+      - script.execute: script_turn_on_steps_down_to_up
+    turn_off_action:
+      - script.execute: script_turn_off_stairs_down
+  - platform: restart
+    name: "Stairs Up Restart"
 
 light:
   # - platform: neopixelbus
@@ -550,8 +573,62 @@ script:
   - id: script_turn_off_stairs_down
     then:
       - light.turn_off:
+          id: stairs_down_step18
+          transition_length: 10ms
+      - light.turn_off:
+          id: stairs_down_step17
+          transition_length: 10ms
+      - light.turn_off:
+          id: stairs_down_step16
+          transition_length: 10ms          
+      - light.turn_off:
+          id: stairs_down_step15
+          transition_length: 10ms
+      - light.turn_off:
+          id: stairs_down_step14
+          transition_length: 10ms
+      - light.turn_off:
+          id: stairs_down_step13
+          transition_length: 10ms
+      - light.turn_off:
+          id: stairs_down_step12
+          transition_length: 10ms
+      - light.turn_off:
+          id: stairs_down_step11
+          transition_length: 10ms
+      - light.turn_off:
+          id: stairs_down_step10
+          transition_length: 10ms
+      - light.turn_off:
+          id: stairs_down_step9
+          transition_length: 10ms
+      - light.turn_off:
+          id: stairs_down_step8
+          transition_length: 10ms
+      - light.turn_off:
+          id: stairs_down_step7
+          transition_length: 10ms
+      - light.turn_off:
+          id: stairs_down_step6
+          transition_length: 10ms
+      - light.turn_off:
+          id: stairs_down_step5
+          transition_length: 10ms
+      - light.turn_off:
+          id: stairs_down_step4
+          transition_length: 10ms
+      - light.turn_off:
+          id: stairs_down_step3
+          transition_length: 10ms
+      - light.turn_off:
+          id: stairs_down_step2
+          transition_length: 10ms
+      - light.turn_off:
+          id: stairs_down_step1
+          transition_length: 10ms
+      - light.turn_off:
           id: stairs_down
-          transition_length: 900ms
+          transition_length: 10ms
   - id: script_turn_on_steps_up_to_down
     then:
       - light.turn_off:
@@ -707,9 +784,10 @@ script:
           green: !lambda 'return id(green_percentage);'
           blue: !lambda 'return id(blue_percentage);'
           brightness: !lambda 'return id(brightness_percentage);'
-      ## wait extra 15,75 seconds to finish the task, total 20 seconds
-      - logger.log: "[script_turn_on_steps_up_to_down], wait 10750ms"
-      - delay: 15750ms
+      ## wait extra 20 seconds to finish the task, total 20 seconds
+      - logger.log: "[script_turn_on_steps_up_to_down], wait 20000ms"
+      - delay: 20000ms
+      - script.execute: script_turn_off_stairs_down
   - id: script_turn_on_steps_down_to_up
     then:
       - light.turn_off:
@@ -865,9 +943,7 @@ script:
           green: !lambda 'return id(green_percentage);'
           blue: !lambda 'return id(blue_percentage);'
           brightness: !lambda 'return id(brightness_percentage);'
-      ## wait extra 16 seconds to finish the task, total 22 seconds
-      - logger.log: "[script_turn_on_steps_down_to_up], wait 16000ms"
-      - delay: 16000ms
-      - light.turn_off:
-          id: stairs_down
-          transition_length: 10ms
+      ## wait extra 20 seconds to finish the task, total 20 seconds
+      - logger.log: "[script_turn_on_steps_up_to_down], wait 20000ms"
+      - delay: 20000ms
+      - script.execute: script_turn_off_stairs_down
