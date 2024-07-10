@@ -13,6 +13,7 @@ api:
     key: !secret api_key_sonof_4ch
 
 ota:
+  platform: esphome
   password: !secret ota_password_sonof_4ch
 
 wifi:
