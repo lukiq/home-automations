@@ -1,0 +1,152 @@
+esphome:
+  name: garden-house-controller
+  friendly_name: Garden House Controller
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+ota:
+  platform: esphome
+  password: !secret ota_password_garden_controller
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_key_garden_house_controller
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO22
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    id: gpio22_button
+    name: "Button"
+    on_press:
+      then:
+        - globals.set:
+            id: last_press_time
+            value: !lambda 'return millis();'
+        - globals.set:
+            id: is_long_press
+            value: 'false'
+        - script.execute: handle_button_press
+    on_release:
+      then:
+        - delay: 50ms
+        - if:
+            condition:
+              lambda: 'return (millis() - id(last_press_time)) < 500;'
+            then:
+              - lambda: |-
+                  ESP_LOGD("custom", "Short press detected");
+                  // Push short press event to Home Assistant
+                  id(press_count) = 0;  // Reset the press count
+              - homeassistant.event:
+                  event: esphome.short_press
+                  data:
+                    entity_id: binary_sensor.gpio22_button
+        - if:
+            condition:
+              lambda: 'return (millis() - id(last_press_time)) >= 500;'
+            then:
+              - globals.set:
+                  id: is_long_press
+                  value: 'true'
+              - delay: 200ms
+              - if:
+                  condition:
+                    lambda: 'return id(is_long_press) == true;'
+                  then:
+                    - lambda: |-
+                        ESP_LOGD("custom", "Long press detected");
+                        // Push long press event to Home Assistant
+                        id(press_count) = 0;  // Reset the press count
+                    - homeassistant.event:
+                        event: esphome.long_press
+                        data:
+                          entity_id: binary_sensor.gpio22_button
+
+# Skrypt obsługujący różne typy naciśnięć
+script:
+  - id: handle_button_press
+    mode: restart
+    then:
+      - globals.set:
+          id: press_count
+          value: !lambda 'return id(press_count) + 1;'
+      - delay: 600ms
+      - if:
+          condition:
+            lambda: 'return (millis() - id(last_press_time)) < 600;'
+          then:
+            - if:
+                condition:
+                  lambda: 'return id(press_count) == 1;'
+                then:
+                  - lambda: |-
+                      ESP_LOGD("custom", "Single press detected");
+                      // Push single press event to Home Assistant
+                      id(press_count) = 0;  // Reset the press count
+                  - homeassistant.event:
+                      event: esphome.single_press
+                      data:
+                        entity_id: binary_sensor.gpio22_button
+            - if:
+                condition:
+                  lambda: 'return id(press_count) == 2;'
+                then:
+                  - lambda: |-
+                      ESP_LOGD("custom", "Double press detected");
+                      // Push double press event to Home Assistant
+                      id(press_count) = 0;  // Reset the press count
+                  - homeassistant.event:
+                      event: esphome.double_press
+                      data:
+                        entity_id: binary_sensor.gpio22_button
+            - if:
+                condition:
+                  lambda: 'return id(press_count) == 3;'
+                then:
+                  - lambda: |-
+                      ESP_LOGD("custom", "Triple press detected");
+                      // Push triple press event to Home Assistant
+                      id(press_count) = 0;  // Reset the press count
+                  - homeassistant.event:
+                      event: esphome.triple_press
+                      data:
+                        entity_id: binary_sensor.gpio22_button
+
+# Zmienna globalna do zliczania naciśnięć
+globals:
+  - id: press_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: last_press_time
+    type: float
+    restore_value: no
+    initial_value: '0.0'
+  - id: is_long_press
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+# Optional: Define web server for monitoring
+web_server:
+  version: 3
+  port: 80
+  auth:
+    username: !secret esp_web_server_username
+    password: !secret esp_web_server_password
