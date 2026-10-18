@@ -1,3 +1,12 @@
+substitutions:
+  default_red: "1.00"
+  default_green: "0.87"
+  default_blue: "0.50"
+  default_brightness: "0.55"
+  default_delay_after_animation_s: "20"
+  default_animation_delay_up_to_down_ms: "400"
+  default_animation_delay_down_to_up_ms: "250"
+
 esphome:
   name: "esp32-stairs-up"
   friendly_name: esp32 Stairs Up
@@ -23,35 +32,80 @@ wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
 
-  # Enable fallback hotspot (captive portal) in case wifi connection fails
-  # password: !secret ap_ssid_password_fallback
   ap:
     ssid: "Stairs up Fallback Hotspot"
     password: !secret ap_password_fallback
 
 captive_portal:
 
-# web_server:
-#   port: 80
-#   version: 2
-
-globals:
-  - id: red_percentage
-    type: float
-    restore_value: no
-    initial_value: "1.00"
-  - id: green_percentage
-    type: float
-    restore_value: no
-    initial_value: "0.87"
-  - id: blue_percentage
-    type: float
-    restore_value: no
-    initial_value: "0.50"
-  - id: brightness_percentage
-    type: float
-    restore_value: no
-    initial_value: "0.55"
+# Color and brightness controls — adjustable from HA
+number:
+  - platform: template
+    name: "Stairs Up Red"
+    id: stairs_up_red
+    min_value: 0
+    max_value: 1
+    step: 0.01
+    initial_value: ${default_red}
+    optimistic: true
+    restore_value: true
+  - platform: template
+    name: "Stairs Up Green"
+    id: stairs_up_green
+    min_value: 0
+    max_value: 1
+    step: 0.01
+    initial_value: ${default_green}
+    optimistic: true
+    restore_value: true
+  - platform: template
+    name: "Stairs Up Blue"
+    id: stairs_up_blue
+    min_value: 0
+    max_value: 1
+    step: 0.01
+    initial_value: ${default_blue}
+    optimistic: true
+    restore_value: true
+  - platform: template
+    name: "Stairs Up Brightness"
+    id: stairs_up_brightness
+    min_value: 0
+    max_value: 1
+    step: 0.01
+    initial_value: ${default_brightness}
+    optimistic: true
+    restore_value: true
+  - platform: template
+    name: "Stairs Up Delay After Animation"
+    id: delay_after_animation_s
+    min_value: 5
+    max_value: 60
+    step: 1
+    unit_of_measurement: "s"
+    initial_value: ${default_delay_after_animation_s}
+    optimistic: true
+    restore_value: true
+  - platform: template
+    name: "Stairs Up Animation Delay Up To Down"
+    id: animation_delay_up_to_down_ms
+    min_value: 100
+    max_value: 1000
+    step: 50
+    unit_of_measurement: "ms"
+    initial_value: ${default_animation_delay_up_to_down_ms}
+    optimistic: true
+    restore_value: true
+  - platform: template
+    name: "Stairs Up Animation Delay Down To Up"
+    id: animation_delay_down_to_up_ms
+    min_value: 100
+    max_value: 1000
+    step: 50
+    unit_of_measurement: "ms"
+    initial_value: ${default_animation_delay_down_to_up_ms}
+    optimistic: true
+    restore_value: true
 
 binary_sensor:
   - platform: gpio
@@ -64,7 +118,6 @@ binary_sensor:
     device_class: motion
     filters:
       - delayed_on: 200ms
-      ### remember, that this will trigger after action in `on_press` are finished (~15sec + 5 seconds)
       - delayed_off: 10ms
     on_press:
       then:
@@ -111,16 +164,14 @@ binary_sensor:
   - platform: gpio
     pin:
       number: GPIO34
-      inverted: true
+      inverted: false
       mode:
         input: true
     name: "PIR Sensor 16st step stairs_up"
     device_class: motion
     filters:
       - delayed_on: 250ms
-      ### remember, that this will trigger after action in `on_press` are finished (~15sec + 5 seconds)
       - delayed_off: 10ms
-
     on_press:
       then:
         - logger.log:
@@ -163,17 +214,16 @@ binary_sensor:
                   else:
                     - logger.log: "[PIR Sensor 16st step stairs_up][on_release], Run script.execute"
                     - script.execute: script_turn_off_stairs_up
-        
+
   - platform: gpio
     pin:
       number: GPIO23
       mode:
         input: true
-        pulldown: true    
+        pulldown: true
     name: "Toggle stairs_up"
-    
-    filters: 
-            - delayed_on_off: 300ms
+    filters:
+      - delayed_on_off: 300ms
     on_state:
       then:
         - switch.toggle: SwitchStairsUpSensorsDisabled
@@ -185,16 +235,16 @@ binary_sensor:
               - light.turn_on:
                   id: stairs_up
                   transition_length: 100ms
-                  red: !lambda 'return id(red_percentage);'
-                  green: !lambda 'return id(green_percentage);'
-                  blue: !lambda 'return id(blue_percentage);'
-                  brightness: !lambda 'return id(brightness_percentage);'
-
+                  red: !lambda 'return id(stairs_up_red).state;'
+                  green: !lambda 'return id(stairs_up_green).state;'
+                  blue: !lambda 'return id(stairs_up_blue).state;'
+                  brightness: !lambda 'return id(stairs_up_brightness).state;'
             else:
               - logger.log: "[Toggle stairs_up][on_release], SwitchStairsUpSensorsDisabled is off"
               - light.turn_off:
                   id: stairs_up
                   transition_length: 100ms
+
 switch:
   - platform: template
     name: "Disabled sensors for upstairs"
@@ -250,11 +300,9 @@ light:
           move_interval: 500ms
           scan_width: 1
     segments:
-      # stairs_step1 - 15
       - id: stairs_up
         from: 0
         to: 14
-
   - platform: partition
     id: "stairs_up_step2"
     name: "stairs_up_step2"
@@ -267,11 +315,9 @@ light:
           move_interval: 500ms
           scan_width: 1
     segments:
-      # stairs_step2 - 16
       - id: stairs_up
         from: 15
         to: 30
-
   - platform: partition
     id: "stairs_up_step3"
     name: "stairs_up_step3"
@@ -284,11 +330,9 @@ light:
           move_interval: 500ms
           scan_width: 1
     segments:
-      # stairs_step3 - 16
       - id: stairs_up
         from: 31
         to: 46
-
   - platform: partition
     id: "stairs_up_step4"
     name: "stairs_up_step4"
@@ -301,11 +345,9 @@ light:
           move_interval: 500ms
           scan_width: 1
     segments:
-      # stairs_step4 - 16
       - id: stairs_up
         from: 47
         to: 62
-
   - platform: partition
     id: "stairs_up_step5"
     name: "stairs_up_step5"
@@ -318,11 +360,9 @@ light:
           move_interval: 500ms
           scan_width: 1
     segments:
-      # stairs_step5 - 20
       - id: stairs_up
         from: 63
         to: 82
-
   - platform: partition
     id: "stairs_up_step6"
     name: "stairs_up_step6"
@@ -335,11 +375,9 @@ light:
           move_interval: 500ms
           scan_width: 1
     segments:
-      # stairs_step6 - 19
       - id: stairs_up
         from: 83
         to: 101
-
   - platform: partition
     id: "stairs_up_step7"
     name: "stairs_up_step7"
@@ -352,11 +390,9 @@ light:
           move_interval: 500ms
           scan_width: 1
     segments:
-      # stairs_step7 - 16
       - id: stairs_up
         from: 102
         to: 117
-
   - platform: partition
     id: "stairs_up_step8"
     name: "stairs_up_step8"
@@ -369,11 +405,9 @@ light:
           move_interval: 500ms
           scan_width: 1
     segments:
-      # stairs_step8 - 16
       - id: stairs_up
         from: 118
         to: 133
-
   - platform: partition
     id: "stairs_up_step9"
     name: "stairs_up_step9"
@@ -386,11 +420,9 @@ light:
           move_interval: 500ms
           scan_width: 1
     segments:
-      # stairs_step9 - 18
       - id: stairs_up
         from: 134
         to: 151
-
   - platform: partition
     id: "stairs_up_step10"
     name: "stairs_up_step10"
@@ -403,11 +435,9 @@ light:
           move_interval: 500ms
           scan_width: 1
     segments:
-      # stairs_step10 - 21
       - id: stairs_up
         from: 152
         to: 172
-
   - platform: partition
     id: "stairs_up_step11"
     name: "stairs_up_step11"
@@ -420,11 +450,9 @@ light:
           move_interval: 500ms
           scan_width: 1
     segments:
-      # stairs_step11 - 16
       - id: stairs_up
         from: 173
         to: 188
-
   - platform: partition
     id: "stairs_up_step12"
     name: "stairs_up_step12"
@@ -437,11 +465,9 @@ light:
           move_interval: 500ms
           scan_width: 1
     segments:
-      # stairs_step12 - 16
       - id: stairs_up
         from: 189
         to: 204
-
   - platform: partition
     id: "stairs_up_step13"
     name: "stairs_up_step13"
@@ -454,11 +480,9 @@ light:
           move_interval: 500ms
           scan_width: 1
     segments:
-      # stairs_step13 - 15
       - id: stairs_up
         from: 205
         to: 219
-
   - platform: partition
     id: "stairs_up_step14"
     name: "stairs_up_step14"
@@ -471,11 +495,9 @@ light:
           move_interval: 500ms
           scan_width: 1
     segments:
-      # stairs_step14 - 16
       - id: stairs_up
         from: 220
         to: 236
-
   - platform: partition
     id: "stairs_up_step15"
     name: "stairs_up_step15"
@@ -488,11 +510,9 @@ light:
           move_interval: 500ms
           scan_width: 1
     segments:
-      # stairs_step15 - 16
       - id: stairs_up
-        from: 236
+        from: 237
         to: 251
-
   - platform: partition
     id: "stairs_up_step16"
     name: "stairs_up_step16"
@@ -505,15 +525,13 @@ light:
           move_interval: 500ms
           scan_width: 1
     segments:
-      # stairs_step16 - 16
       - id: stairs_up
         from: 252
         to: 267
-  
-
 
 script:
   - id: script_turn_off_stairs_up
+    mode: single
     then:
       - light.turn_off:
           id: stairs_up_step16
@@ -565,276 +583,279 @@ script:
           transition_length: 10ms
       - light.turn_off:
           id: stairs_up
-          transition_length: 10ms
+          transition_length: 100ms
+
   - id: script_turn_on_steps_down_to_up
+    mode: single
     then:
       - light.turn_off:
           id: stairs_up
           transition_length: 10ms
       - light.turn_on:
           id: stairs_up_step16
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 250ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_down_to_up_ms).state;'
       - light.turn_on:
           id: stairs_up_step15
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 250ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_down_to_up_ms).state;'
       - light.turn_on:
           id: stairs_up_step14
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 250ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_down_to_up_ms).state;'
       - light.turn_on:
           id: stairs_up_step13
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 250ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_down_to_up_ms).state;'
       - light.turn_on:
           id: stairs_up_step12
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 250ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_down_to_up_ms).state;'
       - light.turn_on:
           id: stairs_up_step11
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 250ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_down_to_up_ms).state;'
       - light.turn_on:
           id: stairs_up_step10
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 250ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_down_to_up_ms).state;'
       - light.turn_on:
           id: stairs_up_step9
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 250ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_down_to_up_ms).state;'
       - light.turn_on:
           id: stairs_up_step8
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 250ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_down_to_up_ms).state;'
       - light.turn_on:
           id: stairs_up_step7
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 250ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_down_to_up_ms).state;'
       - light.turn_on:
           id: stairs_up_step6
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 250ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_down_to_up_ms).state;'
       - light.turn_on:
           id: stairs_up_step5
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 250ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_down_to_up_ms).state;'
       - light.turn_on:
           id: stairs_up_step4
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 250ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_down_to_up_ms).state;'
       - light.turn_on:
           id: stairs_up_step3
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 250ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_down_to_up_ms).state;'
       - light.turn_on:
           id: stairs_up_step2
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 250ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_down_to_up_ms).state;'
       - light.turn_on:
           id: stairs_up_step1
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
       - light.turn_on:
           id: stairs_up
           transition_length: 10ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - logger.log: "[script_turn_on_steps_down_to_up], wait 10000ms"
-      - delay: 20000ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - logger.log: "[script_turn_on_steps_down_to_up], waiting delay_after_animation"
+      - delay: !lambda 'return id(delay_after_animation_s).state * 1000;'
       - logger.log: "[script.execute: script_turn_off_stairs_up]"
       - script.execute: script_turn_off_stairs_up
+
   - id: script_turn_on_steps_up_to_down
+    mode: single
     then:
       - light.turn_off:
           id: stairs_up
           transition_length: 10ms
       - light.turn_on:
           id: stairs_up_step1
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 400ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_up_to_down_ms).state;'
       - light.turn_on:
           id: stairs_up_step2
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 400ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_up_to_down_ms).state;'
       - light.turn_on:
           id: stairs_up_step3
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 400ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_up_to_down_ms).state;'
       - light.turn_on:
           id: stairs_up_step4
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 400ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_up_to_down_ms).state;'
       - light.turn_on:
           id: stairs_up_step5
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 400ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_up_to_down_ms).state;'
       - light.turn_on:
           id: stairs_up_step6
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 400ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_up_to_down_ms).state;'
       - light.turn_on:
           id: stairs_up_step7
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 400ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_up_to_down_ms).state;'
       - light.turn_on:
           id: stairs_up_step8
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 400ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_up_to_down_ms).state;'
       - light.turn_on:
           id: stairs_up_step9
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 400ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_up_to_down_ms).state;'
       - light.turn_on:
           id: stairs_up_step10
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 400ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_up_to_down_ms).state;'
       - light.turn_on:
           id: stairs_up_step11
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 400ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_up_to_down_ms).state;'
       - light.turn_on:
           id: stairs_up_step12
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 400ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_up_to_down_ms).state;'
       - light.turn_on:
           id: stairs_up_step13
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 400ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_up_to_down_ms).state;'
       - light.turn_on:
           id: stairs_up_step14
-          transition_length: 100ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - delay: 400ms
+          transition_length: 10ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - delay: !lambda 'return id(animation_delay_up_to_down_ms).state;'
       - light.turn_on:
           id: stairs_up
           transition_length: 10ms
-          red: !lambda 'return id(red_percentage);'
-          green: !lambda 'return id(green_percentage);'
-          blue: !lambda 'return id(blue_percentage);'
-          brightness: !lambda 'return id(brightness_percentage);'
-      - logger.log: "[script_turn_on_steps_up_to_down], wait 20000ms"
-      - delay: 20000ms
+          red: !lambda 'return id(stairs_up_red).state;'
+          green: !lambda 'return id(stairs_up_green).state;'
+          blue: !lambda 'return id(stairs_up_blue).state;'
+          brightness: !lambda 'return id(stairs_up_brightness).state;'
+      - logger.log: "[script_turn_on_steps_up_to_down], waiting delay_after_animation"
+      - delay: !lambda 'return id(delay_after_animation_s).state * 1000;'
       - logger.log: "[script.execute: script_turn_off_stairs_up]"
       - script.execute: script_turn_off_stairs_up
-    

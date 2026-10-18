@@ -13,7 +13,7 @@ logger:
 # Enable Home Assistant API
 api:
   encryption:
-    key: !secret api_key_ble_tracker
+    key: !secret ble_tracker_api_key
   on_client_connected:
     - esp32_ble_tracker.start_scan:
        continuous: true
@@ -22,7 +22,7 @@ api:
 
 ota:
   - platform: esphome
-    password: !secret ota_password_ble_tracker
+    password: !secret ble_tracker_ota_password
 
 wifi:
   ssid: !secret wifi_ssid
