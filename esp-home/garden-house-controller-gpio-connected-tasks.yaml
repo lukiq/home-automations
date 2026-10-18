@@ -1,0 +1,205 @@
+esphome:
+  name: garden-house-controller
+  friendly_name: Garden House Controller
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+ota:
+  platform: esphome
+  password: !secret ota_password_garden_controller
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_key_garden_house_controller
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+# Define the GPIO pins for the relays
+switch:
+  - platform: gpio
+    name: "Main Section"
+    id: main_section
+    pin: GPIO32
+    inverted: true
+    on_turn_off:
+      then:
+        - switch.turn_off: section_1
+        - switch.turn_off: section_2
+        - switch.turn_off: section_3
+        - switch.turn_off: section_4
+        - switch.turn_off: section_5
+
+  - platform: gpio
+    name: "Section 1"
+    id: section_1
+    pin: GPIO33
+    inverted: true
+    on_turn_on:
+      then:
+        - switch.turn_on: main_section
+        - switch.turn_off: section_2
+        - switch.turn_off: section_3
+        - switch.turn_off: section_4
+        - switch.turn_off: section_5
+        - switch.turn_on: section_1_state
+    on_turn_off:
+      then:
+        - switch.turn_off: section_1_state
+
+  - platform: gpio
+    name: "Section 2"
+    id: section_2
+    pin: GPIO25
+    inverted: true
+    on_turn_on:
+      then:
+        - switch.turn_on: main_section
+        - switch.turn_off: section_1
+        - switch.turn_off: section_3
+        - switch.turn_off: section_4
+        - switch.turn_off: section_5
+        - switch.turn_on: section_2_state
+    on_turn_off:
+      then:
+        - switch.turn_off: section_2_state
+
+  - platform: gpio
+    name: "Section 3"
+    id: section_3
+    pin: GPIO26
+    inverted: true
+    on_turn_on:
+      then:
+        - switch.turn_on: main_section
+        - switch.turn_off: section_1
+        - switch.turn_off: section_2
+        - switch.turn_off: section_4
+        - switch.turn_off: section_5
+        - switch.turn_on: section_3_state
+    on_turn_off:
+      then:
+        - switch.turn_off: section_3_state
+
+  - platform: gpio
+    name: "Section 4"
+    id: section_4
+    pin: GPIO27
+    inverted: true
+    on_turn_on:
+      then:
+        - switch.turn_on: main_section
+        - switch.turn_off: section_1
+        - switch.turn_off: section_2
+        - switch.turn_off: section_3
+        - switch.turn_off: section_5
+        - switch.turn_on: section_4_state
+    on_turn_off:
+      then:
+        - switch.turn_off: section_4_state
+
+  - platform: gpio
+    name: "Section 5"
+    id: section_5
+    pin: GPIO14
+    inverted: true
+    on_turn_on:
+      then:
+        - switch.turn_on: main_section
+        - switch.turn_off: section_1
+        - switch.turn_off: section_2
+        - switch.turn_off: section_3
+        - switch.turn_off: section_4
+        - switch.turn_on: section_5_state
+    on_turn_off:
+      then:
+        - switch.turn_off: section_5_state
+
+  - platform: gpio
+    name: "Garden Switch 1"
+    pin: GPIO2
+    inverted: true
+
+  - platform: gpio
+    name: "Garden Switch 2"
+    pin: GPIO15
+    inverted: true
+
+  - platform: template
+    name: "Section 1 State"
+    id: section_1_state
+    turn_off_action:
+      - if:
+          condition:
+            switch.is_off: section_1
+          then:
+            - switch.turn_off: main_section
+
+  - platform: template
+    name: "Section 2 State"
+    id: section_2_state
+    turn_off_action:
+      - if:
+          condition:
+            switch.is_off: section_2
+          then:
+            - switch.turn_off: main_section
+
+  - platform: template
+    name: "Section 3 State"
+    id: section_3_state
+    turn_off_action:
+      - if:
+          condition:
+            switch.is_off: section_3
+          then:
+            - switch.turn_off: main_section
+
+  - platform: template
+    name: "Section 4 State"
+    id: section_4_state
+    turn_off_action:
+      - if:
+          condition:
+            switch.is_off: section_4
+          then:
+            - switch.turn_off: main_section
+
+  - platform: template
+    name: "Section 5 State"
+    id: section_5_state
+    turn_off_action:
+      - if:
+          condition:
+            switch.is_off: section_5
+          then:
+            - switch.turn_off: main_section
+
+binary_sensor:
+  - platform: gpio
+    name: "contracton"
+    pin:
+      number: GPIO23
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    filters:
+      - delayed_on: 100ms
+      - delayed_off: 100ms
+
+# Optional: Define web server for monitoring
+web_server:
+  version: 3
+  port: 80
+  auth:
+    username: !secret esp_web_server_username
+    password: !secret esp_web_server_password

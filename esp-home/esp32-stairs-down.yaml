@@ -20,8 +20,8 @@ ota:
   password: !secret ota_password
 
 wifi:
-  ssid: !secret wifi_haground_ssid
-  password: !secret wifi_haground_password
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
 
   # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
@@ -60,7 +60,7 @@ binary_sensor:
     name: "PIR Sensor 1st step Laser stairs_down"
     device_class: motion
     filters:
-      - delayed_on: 100ms
+      - delayed_on: 100ms # do not change to less than 100
       ### remember, that this will trigger after action in `on_press` are finished (~15sec + 5 seconds)
       - delayed_off: 10ms
     on_press:
