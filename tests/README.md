@@ -1,6 +1,6 @@
-# Upstairs stairs checks
+# Stairs checks
 
-Configuration: `esp-home/esp32-stairs-up.yaml`.
+Configurations: `esp-home/esp32-stairs-up.yaml` and `esp-home/esp32-stairs-down.yaml`.
 
 ## Local regression scenarios
 
@@ -55,3 +55,19 @@ Repeat the scenarios on the stairs while watching ESPHome logs. Verify actual se
 ESPHome 2025.5.2: validation and production firmware compilation passed; all eleven local scenarios passed. In Wokwi, rendered LED colors confirmed forward and reverse animation, all 268 LEDs lit, held-sensor retention, a second passage extending the original deadline, eventual shutdown, manual interruption/retention beyond 20 seconds, and return to automation with/without active motion. An opposing sensor press/release during forward animation did not decrease the number of lit LEDs. Simulator-only WS2812B/GRB adaptation applies.
 
 The production configuration was then installed by the user on the physical ESP32 using ESPHome 2026.9.1. Both directions and sensors worked. Repeated sensor activity, a descent and a return ascent kept the lights on; all steps switched off after the final sensor release (03:49:35.585 → 03:49:54.631 in received logs, approximately 19 seconds). Physical manual-mode, network-loss and restart scenarios were not tested.
+
+## Downstairs stairs
+
+Project: https://wokwi.com/projects/478182788262582273
+
+```sh
+python3 tests/wokwi/build.py down
+```
+
+Upload `.context/wokwi-down/.esphome/build/esp32-stairs-down-test/.pioenvs/esp32-stairs-down-test/firmware.factory.bin` with F1 → **Upload Firmware and Start Simulation…**. A convenient copy of the current build is `/Users/lukiq/Downloads/schody-dol-wokwi.bin`. The normal green Start button builds the Arduino placeholder instead.
+
+Restore the diagram from `tests/wokwi/diagram-down.json` if needed. Its 18 rings represent all 321 LEDs, in row-major order. Slide switches replace the first sensor (GPIO18, active low), last sensor (GPIO19, active high) and manual wall switch (GPIO23, both-edge toggle). The same simulator-only WS2812B/GRB adaptation and dummy credentials apply. Use the acceptance scenarios above with 18 steps.
+
+Local checks cover eleven motion/manual/stop scenarios per device. `test_stairs_effect.py` also compiles the actual downstairs `my effect` lambda with checked LED ranges and undefined-behavior/bounds sanitizers, and runs repeated complete cycles and resets. It checks indexing and progression, not the visual appearance or LED driver timing.
+
+Downstairs validation (2026-10-18): all 23 local tests passed; production and simulator firmware compiled with ESPHome 2025.5.2. Online acceptance is still pending: Wokwi reported an IoT Gateway connection failure during the initial run. The user subsequently installed the configuration on the physical ESP32; device logs identify ESPHome 2026.9.1. Received logs show the upper sensor starting steps 18→1 over 4.225 seconds, renewed motion without restarting the sequence, and shutdown about 20.2 seconds after the last sensor release. The reported appearance of several initial steps lighting together remains unresolved; state logs do not prove the physical LED output. Physical manual-mode and effect appearance checks remain pending.
