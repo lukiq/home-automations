@@ -1,6 +1,26 @@
 esphome:
   name: garden-house-controller
   friendly_name: Garden House Controller
+  on_boot:
+    priority: -100
+    then:
+      # Keep existing HA section switches reporting physical valves, including companions.
+      - lambda: |-
+          id(section_1_control).set_state_lambda([]() -> esphome::optional<bool> {
+            return id(section_1).state && id(main_section).state;
+          });
+          id(section_2_control).set_state_lambda([]() -> esphome::optional<bool> {
+            return id(section_2).state && id(main_section).state;
+          });
+          id(section_3_control).set_state_lambda([]() -> esphome::optional<bool> {
+            return id(section_3).state && id(main_section).state;
+          });
+          id(section_4_control).set_state_lambda([]() -> esphome::optional<bool> {
+            return id(section_4).state && id(main_section).state;
+          });
+          id(section_5_control).set_state_lambda([]() -> esphome::optional<bool> {
+            return id(section_5).state && id(main_section).state;
+          });
 
 esp32:
   board: esp32dev
@@ -57,6 +77,17 @@ wifi:
 
 captive_portal:
 
+# A long press must not also run the short action at the timing boundary.
+globals:
+  - id: garden_down_long_press
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: garden_up_long_press
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+
 switch:
   - platform: gpio
     id: main_section
@@ -65,9 +96,9 @@ switch:
     inverted: true
     internal: true
     on_turn_on:
-      - logger.log: "Pump: ON"
+      - logger.log: "Main valve: OPEN"
     on_turn_off:
-      - logger.log: "Pump: OFF"
+      - logger.log: "Main valve: CLOSED"
 
   - platform: gpio
     id: section_1
@@ -77,27 +108,8 @@ switch:
     internal: true
     on_turn_on:
       - logger.log: "Section 1: OPEN"
-      - lambda: |-
-          int t = (int)id(section_1_parallel).state;
-          if (t < 1 || t > 5 || t == 1) return;
-          if (t == 2) id(section_2).turn_on();
-          else if (t == 3) id(section_3).turn_on();
-          else if (t == 4) id(section_4).turn_on();
-          else if (t == 5) id(section_5).turn_on();
     on_turn_off:
       - logger.log: "Section 1: CLOSED"
-      - lambda: |-
-          int t = (int)id(section_1_parallel).state;
-          if (t < 1 || t > 5 || t == 1) return;
-          bool keep = (t == (int)id(section_2_parallel).state && id(section_2).state) ||
-                      (t == (int)id(section_3_parallel).state && id(section_3).state) ||
-                      (t == (int)id(section_4_parallel).state && id(section_4).state) ||
-                      (t == (int)id(section_5_parallel).state && id(section_5).state);
-          if (keep) return;
-          if (t == 2) id(section_2).turn_off();
-          else if (t == 3) id(section_3).turn_off();
-          else if (t == 4) id(section_4).turn_off();
-          else if (t == 5) id(section_5).turn_off();
 
   - platform: gpio
     id: section_2
@@ -107,27 +119,8 @@ switch:
     internal: true
     on_turn_on:
       - logger.log: "Section 2: OPEN"
-      - lambda: |-
-          int t = (int)id(section_2_parallel).state;
-          if (t < 1 || t > 5 || t == 2) return;
-          if (t == 1) id(section_1).turn_on();
-          else if (t == 3) id(section_3).turn_on();
-          else if (t == 4) id(section_4).turn_on();
-          else if (t == 5) id(section_5).turn_on();
     on_turn_off:
       - logger.log: "Section 2: CLOSED"
-      - lambda: |-
-          int t = (int)id(section_2_parallel).state;
-          if (t < 1 || t > 5 || t == 2) return;
-          bool keep = (t == (int)id(section_1_parallel).state && id(section_1).state) ||
-                      (t == (int)id(section_3_parallel).state && id(section_3).state) ||
-                      (t == (int)id(section_4_parallel).state && id(section_4).state) ||
-                      (t == (int)id(section_5_parallel).state && id(section_5).state);
-          if (keep) return;
-          if (t == 1) id(section_1).turn_off();
-          else if (t == 3) id(section_3).turn_off();
-          else if (t == 4) id(section_4).turn_off();
-          else if (t == 5) id(section_5).turn_off();
 
   - platform: gpio
     id: section_3
@@ -137,27 +130,8 @@ switch:
     internal: true
     on_turn_on:
       - logger.log: "Section 3: OPEN"
-      - lambda: |-
-          int t = (int)id(section_3_parallel).state;
-          if (t < 1 || t > 5 || t == 3) return;
-          if (t == 1) id(section_1).turn_on();
-          else if (t == 2) id(section_2).turn_on();
-          else if (t == 4) id(section_4).turn_on();
-          else if (t == 5) id(section_5).turn_on();
     on_turn_off:
       - logger.log: "Section 3: CLOSED"
-      - lambda: |-
-          int t = (int)id(section_3_parallel).state;
-          if (t < 1 || t > 5 || t == 3) return;
-          bool keep = (t == (int)id(section_1_parallel).state && id(section_1).state) ||
-                      (t == (int)id(section_2_parallel).state && id(section_2).state) ||
-                      (t == (int)id(section_4_parallel).state && id(section_4).state) ||
-                      (t == (int)id(section_5_parallel).state && id(section_5).state);
-          if (keep) return;
-          if (t == 1) id(section_1).turn_off();
-          else if (t == 2) id(section_2).turn_off();
-          else if (t == 4) id(section_4).turn_off();
-          else if (t == 5) id(section_5).turn_off();
 
   - platform: gpio
     id: section_4
@@ -167,27 +141,8 @@ switch:
     internal: true
     on_turn_on:
       - logger.log: "Section 4: OPEN"
-      - lambda: |-
-          int t = (int)id(section_4_parallel).state;
-          if (t < 1 || t > 5 || t == 4) return;
-          if (t == 1) id(section_1).turn_on();
-          else if (t == 2) id(section_2).turn_on();
-          else if (t == 3) id(section_3).turn_on();
-          else if (t == 5) id(section_5).turn_on();
     on_turn_off:
       - logger.log: "Section 4: CLOSED"
-      - lambda: |-
-          int t = (int)id(section_4_parallel).state;
-          if (t < 1 || t > 5 || t == 4) return;
-          bool keep = (t == (int)id(section_1_parallel).state && id(section_1).state) ||
-                      (t == (int)id(section_2_parallel).state && id(section_2).state) ||
-                      (t == (int)id(section_3_parallel).state && id(section_3).state) ||
-                      (t == (int)id(section_5_parallel).state && id(section_5).state);
-          if (keep) return;
-          if (t == 1) id(section_1).turn_off();
-          else if (t == 2) id(section_2).turn_off();
-          else if (t == 3) id(section_3).turn_off();
-          else if (t == 5) id(section_5).turn_off();
 
   - platform: gpio
     id: section_5
@@ -197,27 +152,49 @@ switch:
     internal: true
     on_turn_on:
       - logger.log: "Section 5: OPEN"
-      - lambda: |-
-          int t = (int)id(section_5_parallel).state;
-          if (t < 1 || t > 5 || t == 5) return;
-          if (t == 1) id(section_1).turn_on();
-          else if (t == 2) id(section_2).turn_on();
-          else if (t == 3) id(section_3).turn_on();
-          else if (t == 4) id(section_4).turn_on();
     on_turn_off:
       - logger.log: "Section 5: CLOSED"
-      - lambda: |-
-          int t = (int)id(section_5_parallel).state;
-          if (t < 1 || t > 5 || t == 5) return;
-          bool keep = (t == (int)id(section_1_parallel).state && id(section_1).state) ||
-                      (t == (int)id(section_2_parallel).state && id(section_2).state) ||
-                      (t == (int)id(section_3_parallel).state && id(section_3).state) ||
-                      (t == (int)id(section_4_parallel).state && id(section_4).state);
-          if (keep) return;
-          if (t == 1) id(section_1).turn_off();
-          else if (t == 2) id(section_2).turn_off();
-          else if (t == 3) id(section_3).turn_off();
-          else if (t == 4) id(section_4).turn_off();
+
+  # Sprinkler owns these requests; only the reconciler writes physical valves.
+  - platform: template
+    id: section_1_request
+    internal: true
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    on_state:
+      - script.execute: garden_reconcile_valves
+
+  - platform: template
+    id: section_2_request
+    internal: true
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    on_state:
+      - script.execute: garden_reconcile_valves
+
+  - platform: template
+    id: section_3_request
+    internal: true
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    on_state:
+      - script.execute: garden_reconcile_valves
+
+  - platform: template
+    id: section_4_request
+    internal: true
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    on_state:
+      - script.execute: garden_reconcile_valves
+
+  - platform: template
+    id: section_5_request
+    internal: true
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    on_state:
+      - script.execute: garden_reconcile_valves
 
   - platform: gpio
     name: "Garden Switch 1"
@@ -239,7 +216,9 @@ sprinkler:
     manual_selection_delay: 2s
     valve_overlap: 5s
     valves:
-        - valve_switch: "Section 1"
+        - valve_switch:
+            name: "Section 1"
+            id: section_1_control
           enable_switch: "Enable Section 1"
           pump_switch_id: main_section
           # run_duration: 1200s
@@ -248,8 +227,10 @@ sprinkler:
             id: garden_sprinkler_back_yard_section_1_run_duration
             initial_value: 1200
             unit_of_measurement: s
-          valve_switch_id: section_1
-        - valve_switch: "Section 2"
+          valve_switch_id: section_1_request
+        - valve_switch:
+            name: "Section 2"
+            id: section_2_control
           enable_switch: "Enable Section 2"
           pump_switch_id: main_section
           # run_duration: 1200s
@@ -258,8 +239,10 @@ sprinkler:
             id: garden_sprinkler_front_yard_section_2_run_duration
             initial_value: 1200
             unit_of_measurement: s
-          valve_switch_id: section_2
-        - valve_switch: "Section 3"
+          valve_switch_id: section_2_request
+        - valve_switch:
+            name: "Section 3"
+            id: section_3_control
           enable_switch: "Enable Section 3"
           pump_switch_id: main_section
           # run_duration: 1200s
@@ -269,8 +252,10 @@ sprinkler:
             id: garden_sprinkler_back_yard_section_3_run_duration
             initial_value: 1200
             unit_of_measurement: s
-          valve_switch_id: section_3
-        - valve_switch: "Section 4"
+          valve_switch_id: section_3_request
+        - valve_switch:
+            name: "Section 4"
+            id: section_4_control
           enable_switch: "Enable Section 4"
           pump_switch_id: main_section
           # run_duration: 1800s
@@ -280,8 +265,10 @@ sprinkler:
             id: garden_sprinkler_plant_drip_line_section_4_run_duration
             initial_value: 1800
             unit_of_measurement: s
-          valve_switch_id: section_4
-        - valve_switch: "Section 5"
+          valve_switch_id: section_4_request
+        - valve_switch:
+            name: "Section 5"
+            id: section_5_control
           enable_switch: "Enable Section 5"
           pump_switch_id: main_section
           # run_duration: 1800s
@@ -291,7 +278,7 @@ sprinkler:
             id: garden_sprinkler_vegetables_drip_line_section_5_run_duration
             initial_value: 1800
             unit_of_measurement: s
-          valve_switch_id: section_5
+          valve_switch_id: section_5_request
 
 number:
   - platform: template
@@ -304,6 +291,8 @@ number:
     optimistic: true
     restore_value: true
     entity_category: config
+    on_value:
+      - script.execute: garden_reconcile_valves
   - platform: template
     name: "Section 2 Parallel Section"
     id: section_2_parallel
@@ -314,6 +303,8 @@ number:
     optimistic: true
     restore_value: true
     entity_category: config
+    on_value:
+      - script.execute: garden_reconcile_valves
   - platform: template
     name: "Section 3 Parallel Section"
     id: section_3_parallel
@@ -324,6 +315,8 @@ number:
     optimistic: true
     restore_value: true
     entity_category: config
+    on_value:
+      - script.execute: garden_reconcile_valves
   - platform: template
     name: "Section 4 Parallel Section"
     id: section_4_parallel
@@ -334,6 +327,8 @@ number:
     optimistic: true
     restore_value: true
     entity_category: config
+    on_value:
+      - script.execute: garden_reconcile_valves
   - platform: template
     name: "Section 5 Parallel Section"
     id: section_5_parallel
@@ -344,6 +339,8 @@ number:
     optimistic: true
     restore_value: true
     entity_category: config
+    on_value:
+      - script.execute: garden_reconcile_valves
 
 binary_sensor:
   - platform: gpio
@@ -357,18 +354,28 @@ binary_sensor:
     name: "Garden Sensor Down"
     filters:
       - delayed_off: 50ms
+    on_press:
+      - globals.set:
+          id: garden_down_long_press
+          value: 'false'
     on_multi_click:
       - timing:
           - ON for at most 1s
           - OFF for at least 0.5s
         then:
-          - logger.log: "Button DOWN: short → previous valve"
-          - sprinkler.previous_valve: garden_sprinkler_ctrlr
+          - if:
+              condition:
+                lambda: 'return !id(garden_down_long_press);'
+              then:
+                - logger.log: "Button DOWN: short -> previous valve"
+                - sprinkler.previous_valve: garden_sprinkler_ctrlr
       - timing:
-          - ON for 1s to 2s
-          - OFF for at least 0.5s
+          - ON for at least 1s
         then:
-          - logger.log: "Button DOWN: long → shutdown"
+          - globals.set:
+              id: garden_down_long_press
+              value: 'true'
+          - logger.log: "Button DOWN: held -> shutdown"
           - sprinkler.shutdown: garden_sprinkler_ctrlr
   - platform: gpio
     pin:
@@ -381,19 +388,70 @@ binary_sensor:
     name: "Garden Sensor Up"
     filters:
       - delayed_off: 50ms
+    on_press:
+      - globals.set:
+          id: garden_up_long_press
+          value: 'false'
     on_multi_click:
       - timing:
           - ON for at most 1s
           - OFF for at least 0.5s
         then:
-          - logger.log: "Button UP: short → next valve"
-          - sprinkler.next_valve: garden_sprinkler_ctrlr
+          - if:
+              condition:
+                lambda: 'return !id(garden_up_long_press);'
+              then:
+                - logger.log: "Button UP: short -> next valve"
+                - sprinkler.next_valve: garden_sprinkler_ctrlr
       - timing:
-          - ON for 1s to 2s
-          - OFF for at least 0.5s
+          - ON for at least 1s
         then:
-          - logger.log: "Button UP: long → shutdown"
+          - globals.set:
+              id: garden_up_long_press
+              value: 'true'
+          - logger.log: "Button UP: held -> shutdown"
           - sprinkler.shutdown: garden_sprinkler_ctrlr
+
+script:
+  - id: garden_reconcile_valves
+    mode: single
+    then:
+      - lambda: |-
+          const bool requested[] = {
+            id(section_1_request).state, id(section_2_request).state,
+            id(section_3_request).state, id(section_4_request).state,
+            id(section_5_request).state
+          };
+          const float parallel[] = {
+            id(section_1_parallel).state, id(section_2_parallel).state,
+            id(section_3_parallel).state, id(section_4_parallel).state,
+            id(section_5_parallel).state
+          };
+          esphome::switch_::Switch *outputs[] = {
+            id(section_1), id(section_2), id(section_3),
+            id(section_4), id(section_5)
+          };
+          bool wanted[5] = {};
+          for (size_t source = 0; source < 5; source++) {
+            if (!requested[source]) continue;
+            size_t section = source;
+            // Shared paths stop at visited nodes; cycles cannot keep themselves on.
+            while (!wanted[section]) {
+              wanted[section] = true;
+              const float target = parallel[section];
+              // Restored numbers can be unknown during startup. Check before casting.
+              if (!std::isfinite(target) || target < 1 || target > 5 ||
+                  target != std::floor(target)) break;
+              section = static_cast<size_t>(target) - 1;
+            }
+          }
+          // Establish new paths before closing old ones during live remapping.
+          for (size_t i = 0; i < 5; i++) {
+            if (wanted[i] && !outputs[i]->state) outputs[i]->turn_on();
+          }
+          for (size_t i = 0; i < 5; i++) {
+            if (!wanted[i] && outputs[i]->state) outputs[i]->turn_off();
+          }
 
 # Optional: Define web server for monitoring
 web_server:

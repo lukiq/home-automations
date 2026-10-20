@@ -1,0 +1,37 @@
+# Replace the existing start automation with this definition; disable the old
+# garden_pump_off_sprinklers_stop automation when deploying. Do not add a second
+# copy: this automation must be the single owner of the delayed ON and STOP.
+- id: garden_pump_on_sprinklers_start
+  alias: '[garden] Pump power follows sprinklers'
+  mode: restart
+  triggers:
+    - trigger: state
+      entity_id: switch.garden_house_controller_lawn_sprinklers
+      to: 'on'
+    - trigger: state
+      entity_id: switch.garden_house_controller_lawn_sprinklers
+      to: 'off'
+  actions:
+    - choose:
+        - conditions:
+            - condition: state
+              entity_id: switch.garden_house_controller_lawn_sprinklers
+              state: 'on'
+          sequence:
+            - delay:
+                seconds: 2
+            - action: switch.turn_off
+              target:
+                entity_id: switch.tuyasmartplug_1
+            - delay:
+                seconds: 15
+            - condition: state
+              entity_id: switch.garden_house_controller_lawn_sprinklers
+              state: 'on'
+            - action: switch.turn_on
+              target:
+                entity_id: switch.tuyasmartplug_1
+      default:
+        - action: switch.turn_off
+          target:
+            entity_id: switch.tuyasmartplug_1

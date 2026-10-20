@@ -71,3 +71,62 @@ Restore the diagram from `tests/wokwi/diagram-down.json` if needed. Its 18 rings
 Local checks cover eleven motion/manual/stop scenarios per device. `test_stairs_effect.py` also compiles the actual downstairs `my effect` lambda with checked LED ranges and undefined-behavior/bounds sanitizers, and runs repeated complete cycles and resets. It checks indexing and progression, not the visual appearance or LED driver timing.
 
 Downstairs validation (2026-10-18): all 23 local tests passed; production and simulator firmware compiled with ESPHome 2025.5.2. Online acceptance is still pending: Wokwi reported an IoT Gateway connection failure during the initial run. The user subsequently installed the configuration on the physical ESP32; device logs identify ESPHome 2026.9.1. Received logs show the upper sensor starting steps 18→1 over 4.225 seconds, renewed motion without restarting the sequence, and shutdown about 20.2 seconds after the last sensor release. The reported appearance of several initial steps lighting together remains unresolved; state logs do not prove the physical LED output. Physical manual-mode and effect appearance checks remain pending.
+
+## Garden controller
+
+Configuration: `esp-home/garden-house-controller.yaml`. Sprinkler requests are
+separate from physical relay states. One reconciler opens the union of requested
+sections and their parallel companions. Chains are preserved; visited nodes
+bound cycles. Changing a parallel-section number applies immediately, opening
+new paths before closing obsolete ones. Existing HA section switches continue
+to report physical valve state with the main valve open, including companions.
+
+Both buttons stop irrigation after one second of logical ON, while still held.
+The existing 50 ms release filter and short-click settling time remain. A long
+press cannot also execute a short action after release.
+
+Run the native regression scenarios with Python 3.12+ and ESPHome 2026.8.2,
+matching the pre-update controller:
+
+```sh
+python3.12 -m venv .context/garden-env
+.context/garden-env/bin/pip install esphome==2026.8.2
+python3 tests/garden/run.py --esphome "$PWD/.context/garden-env/bin/esphome"
+```
+
+The runner loads the production YAML, replaces inputs with template sensors and
+uses host GPIO outputs that only log writes. It retains the real sprinkler,
+switch callbacks, filters and scheduler. Network, API, OTA and web server are
+removed, so it neither uses secrets nor connects to the controller. Test-only
+run times are shortened; the 5-second valve overlap and multiplier are retained.
+Results, generated YAML and compiler/runtime logs are under `.context/garden-tests/`.
+
+Scenarios cover the current 3-to-4 transition, direct and shared companions,
+live mapping changes, chains/cycles, invalid mappings, shutdown, physical-state
+reporting and both short/held button actions. `--case` selects an individual
+scenario. `--source` and `--output` allow checking the previous YAML separately.
+
+`test_garden_pump.py` replays the replacement HA pump YAML in virtual time. It
+checks cancellation during both delays, restart and the final ON state guard;
+it is not an execution test of Home Assistant or the Tuya integration.
+Deployment and the disconnected-load acceptance procedure are described in
+`home-assistant/README.md`. No physical valve, flow or pump-power result is
+established by these tests.
+
+Garden validation (2026-10-20): 21 native ESPHome 2026.8.2 scenarios passed,
+including physical-state reporting to the existing HA section switches. The
+previous YAML failed the live-remapping and held-STOP regression scenarios.
+All 27 ordinary tests passed. The final ESP32 configuration compiled with
+ESPHome 2026.8.2 using dummy secrets; schema validation also passed with Builder
+version 2026.9.1.
+
+Deployment (2026-10-20): Builder 2026.9.1 compiled and uploaded the production
+configuration successfully (940720 bytes, config hash `0xc690cbb0`). The controller
+reconnected and reported ESPHome 2026.9.1, built at 23:35:06 +0200. The saved YAML
+matched the repository exactly. HA showed all sections and Lawn Sprinklers OFF,
+parallel mappings 5/5/4/0/0, durations 3000/3000/3000/1200/2400 seconds and multiplier
+1.2, unchanged after restart. The HA pump automation was replaced and its saved
+YAML matched the repository; the previous separate STOP automation was disabled.
+No physical irrigation or pump-power tests were run. TuyaSmartPlug_1 was
+unavailable, so service delivery and actual pump recovery remain unverified.
+Native runtime scenarios above ran on 2026.8.2, not the newly deployed 2026.9.1.
