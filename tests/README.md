@@ -86,7 +86,7 @@ The existing 50 ms release filter and short-click settling time remain. A long
 press cannot also execute a short action after release.
 
 Run the native regression scenarios with Python 3.12+ and ESPHome 2026.8.2,
-matching the deployed controller:
+matching the pre-update controller:
 
 ```sh
 python3.12 -m venv .context/garden-env
@@ -118,4 +118,15 @@ including physical-state reporting to the existing HA section switches. The
 previous YAML failed the live-remapping and held-STOP regression scenarios.
 All 27 ordinary tests passed. The final ESP32 configuration compiled with
 ESPHome 2026.8.2 using dummy secrets; schema validation also passed with Builder
-version 2026.9.1. The HA replacement has not been run on Home Assistant or deployed.
+version 2026.9.1.
+
+Deployment (2026-10-20): Builder 2026.9.1 compiled and uploaded the production
+configuration successfully (940720 bytes, config hash `0xc690cbb0`). The controller
+reconnected and reported ESPHome 2026.9.1, built at 23:35:06 +0200. The saved YAML
+matched the repository exactly. HA showed all sections and Lawn Sprinklers OFF,
+parallel mappings 5/5/4/0/0, durations 3000/3000/3000/1200/2400 seconds and multiplier
+1.2, unchanged after restart. The HA pump automation was replaced and its saved
+YAML matched the repository; the previous separate STOP automation was disabled.
+No physical irrigation or pump-power tests were run. TuyaSmartPlug_1 was
+unavailable, so service delivery and actual pump recovery remain unverified.
+Native runtime scenarios above ran on 2026.8.2, not the newly deployed 2026.9.1.
